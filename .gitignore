@@ -2,3 +2,9 @@
 data/Images
 data/bobche.jpg
 data/captions.txt
+data/features.pt
+checkpoint.pth
+__pycache__/
+*.pyc
+*.pyo
+*.pyd

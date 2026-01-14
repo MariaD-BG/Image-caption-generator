@@ -38,33 +38,40 @@ class Vocabulary:
             self.itos[idx] = word
 
 class ImageDataset(torch.utils.data.Dataset):
-    def __init__(self, img_path: str, cap_path: str, vocab: Vocabulary):
+
+    def __init__(self, features_path: str, cap_path: str, vocab: Vocabulary, split: str):
+
+        if split not in ["train", "test", "validation"]:
+            raise ValueError("Invalid split argument")
 
         self.vocab = vocab
-        self.img_path = img_path
         self.cap_path = cap_path
+        self.features_path = features_path
 
-        img_folder = Path(img_path)
-        available_imgs = set([img.name for img in img_folder.iterdir()])
+        self.features_dict = torch.load(features_path)
+
         self.data = []
-
-        self.transform = transforms.Compose([
-            transforms.Resize((224, 224)),         # CLIP uses 224x224 images
-            transforms.ToTensor(),
-            transforms.Normalize(
-                mean=[0.48145466, 0.4578275, 0.40821073],
-                std=[0.26862954, 0.26130258, 0.27577711]
-            )
-        ])
-
-        print("Creating dataset...")
+        available_imgs = set(self.features_dict.keys())
         with open(cap_path, "r") as f:
             for line in tqdm.tqdm(f):
                 img_name, cap = line.split(",", maxsplit=1)
                 cap = strip_syntax(cap.lower()).rstrip(' ')
                 if img_name not in available_imgs:
                     continue
-                self.data.append((img_name, cap))
+                self.data.append((self.features_dict[img_name], cap))
+
+        train_end = int(0.8*len(self.data))
+        test_end = int(0.9*len(self.data))
+        data_train = self.data[:train_end]
+        data_test = self.data[train_end:test_end]
+        data_valid = self.data[test_end:]
+
+        if split == "train":
+            self.data = data_train
+        if split == "test":
+            self.data = data_test
+        if split == "validation":
+            self.data = data_valid
 
     def __len__(self) -> int:
         return len(self.data)
@@ -72,11 +79,9 @@ class ImageDataset(torch.utils.data.Dataset):
     def __getitem__(self, index) -> Tuple[str, np.ndarray]:
         img, cap = self.data[index]
         cap = torch.tensor([self.vocab.stoi.get("<SOS>")] + [self.vocab.stoi.get(x,self.vocab.stoi["<UNK>"]) for x in cap.split(" ")] + [self.vocab.stoi.get("<EOS>")])
-        img = Image.open(self.img_path + "/" + img).convert("RGB")
-        img = self.transform(img)
         return (img, cap)
 
-def collate_fn(batch : List[Tuple[str, str]]):
+def collate_fn(batch):
     images, captions = zip(*batch)
     images_tensor = torch.stack(images)
     captions_tensor = pad_sequence(captions, batch_first=True, padding_value  = 0)
