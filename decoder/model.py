@@ -7,13 +7,12 @@ class ImageCaptionModel(nn.Module):
 
         super(ImageCaptionModel, self).__init__()
         self.embed = nn.Embedding(vocab_size, embed_size)
-        self.linear_img = nn.Linear_(input_dim, embed_size)
+        self.linear_img = nn.Linear(input_dim, embed_size)
         self.lstm = nn.LSTM(embed_size, hidden_size, num_layers, batch_first=True)
         self.linear_out = nn.Linear(hidden_size, vocab_size)
 
     def forward(self, features : np.ndarray, captions: np.ndarray):
         """
-
             # features shape: (batch_size, input_dim)
             # captions shape: (batch_size, sequence_length)
         """
