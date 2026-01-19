@@ -8,15 +8,16 @@ from utils import plot_loss, save_checkpoint
 
 input_dim = 768
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model = ImageCaptionModel(input_dim=input_dim, embed_size = 256, hidden_size=64, vocab_size = 5000).to(device)
-criterion = nn.CrossEntropyLoss(ignore_index=0) # The padding index 0 will be ignored
-optimizer = torch.optim.Adam(params = model.parameters(), lr = 0.001)
-
-vocab = Vocabulary(freq_threshold = 5)
+vocab = Vocabulary(freq_threshold = 10)
 vocab.build_vocabulary(captions_path = "data/captions.txt")
+vocab_size = len(vocab)
 train_dataset = ImageDataset(features_path = "data/features.pt", cap_path = "data/captions.txt", vocab = vocab, split = "train")
 val_dataset = ImageDataset(features_path = "data/features.pt", cap_path = "data/captions.txt", vocab = vocab, split = "validation")
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+model = ImageCaptionModel(input_dim=input_dim, embed_size = 128, hidden_size=32, vocab_size = vocab_size, dropout = 0.2).to(device)
+criterion = nn.CrossEntropyLoss(ignore_index=0) # The padding index 0 will be ignored
+optimizer = torch.optim.Adam(params=model.parameters(), lr=0.001, weight_decay=1e-5)
 
 train_loader = DataLoader(dataset = train_dataset, batch_size=256, collate_fn=collate_fn, shuffle = True)
 val_loader = DataLoader(dataset = val_dataset, batch_size=256, collate_fn=collate_fn, shuffle = True)

@@ -18,6 +18,9 @@ class Vocabulary:
         self.stoi = {"<PAD>": 0, "<SOS>": 1, "<EOS>": 2, "<UNK>": 3}
         self.freq_threshold = freq_threshold
 
+    def __len__(self) -> int:
+        return len(self.itos)
+
     def build_vocabulary(self, captions_path:str) -> None:
         frequencies = Counter()
         start_idx = 4

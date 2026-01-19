@@ -6,7 +6,7 @@ from decoder.model import ImageCaptionModel
 
 def plot_loss(train_loss: List[float], val_loss: List[float], save_path: str, val_interval: int = 20) -> None:
 
-    plt.figure()
+    plt.figure(figsize=(12, 6))
     plt.plot(train_loss, marker='o', label='Training Loss', color='blue')
     val_indices = [i for i in range(val_interval - 1, len(train_loss), val_interval)]
     plt.plot(val_indices, val_loss, marker='s', linestyle='--', label='Validation Loss', color='red')
