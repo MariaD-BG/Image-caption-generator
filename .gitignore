@@ -1,10 +1,8 @@
 .vscode/settings.json
-data/Images
-data/bobche.jpg
-data/captions.txt
-data/features.pt
+data/
 test_images/
-checkpoint.pth
+checkpoints/
+plots/
 __pycache__/
 *.pyc
 *.pyo
