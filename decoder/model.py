@@ -35,27 +35,42 @@ class ImageCaptionModel(nn.Module):
         outputs = self.linear_out(lstm_out)
         return outputs
 
-    def generate(self, features, vocab, max_len : int = 20):
-        """
-        Generates a descrption given the feature vector of an image
-
-        :param self: Description
-        :param features: feature vector for target image
-        :param vocab:
-        :param max_len: upper bound for number of tokens per description
-        """
-        result = []
+    def generate(self, features, vocab, max_len=20):
+        result_tokens = []
+        self.eval()
 
         with torch.no_grad():
+            # 1. Feed the Image first to initialize the LSTM states (h, c)
+            # Shape: (1, 1, embed_size)
             inputs = self.linear_img(features).unsqueeze(1)
 
-            states = None
-            next_token = None
+            # We run the LSTM once just to get the 'states' initialized with image info.
+            # We DO NOT use the output of this step because we didn't train on it.
+            _, states = self.lstm(inputs)
 
-            while len(result)<max_len and next_token != vocab.stoi["<EOS>"]:
-                h, c = self.lstm(inputs, c)
-                output = self.linear_out(h.squeeze(1))
+            # 2. Start the actual generation with the <SOS> token
+            # We need to feed <SOS> to get the first real word (just like in training)
+            start_token = vocab.stoi["<SOS>"]
+            inputs = self.embed(torch.tensor([[start_token]]).to(features.device))
+
+            for _ in range(max_len):
+                # Pass inputs (token) and previous states (context from image + prev words)
+                hiddens, states = self.lstm(inputs, states)
+
+                # Predict next word
+                output = self.linear_out(hiddens.squeeze(1))
                 predicted = output.argmax(1)
+
+                token_id = predicted.item()
+
+                # Stop if <EOS>
+                if vocab.itos[token_id] == "<EOS>":
+                    break
+
+                result_tokens.append(token_id)
+
+                # Prepare next input
                 inputs = self.embed(predicted).unsqueeze(1)
 
-        return [vocab.itos[idx] for idx in result]
+        return [vocab.itos[idx] for idx in result_tokens]
+
