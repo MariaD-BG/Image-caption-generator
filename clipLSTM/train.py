@@ -1,33 +1,53 @@
 import torch
+import yaml
 import torch.nn as nn
 from .model import ImageCaptionModel
 from torch.utils.data import Dataset, DataLoader
 from .dataset import Vocabulary, ImageDataset, collate_fn
 from .utils import plot_loss, save_checkpoint
 
-input_dim = 768
+CONFIG_PATH = "config.yaml"
 
-vocab = Vocabulary(freq_threshold = 10)
-vocab.build_vocabulary(captions_path = "../data/captions.txt")
+with open(CONFIG_PATH, "r") as file:
+    config = yaml.safe_load(file)
+
+input_dim = config["clip"]["input_dim"]
+freq_thredhold = config["data"]["words_freq_threshold"]
+data_path = config["data"]["folder_path"]
+captions_path = data_path + "captions.txt"
+features_path = data_path + "features.pt"
+
+embed_size = config["model_params"]["embed_size"]
+hidden_size = config["model_params"]["hidden_size"]
+batch_size = config["training"]["batch_size"]
+lr = config["training"]["lr"]
+weight_decay = config["training"]["weight_decay"]
+dropout = config["training"]["dropout"]
+num_epochs = config["training"]["epochs"]
+
+plots_path = config["saving"]["plots_path"]
+checkpoints_path = config["saving"]["checkpoints_path"]
+
+vocab = Vocabulary(freq_threshold = freq_thredhold)
+vocab.build_vocabulary(captions_path = captions_path)
 vocab_size = len(vocab)
-train_dataset = ImageDataset(features_path = "../data/features.pt", cap_path = "../data/captions.txt", vocab = vocab, split = "train")
-val_dataset = ImageDataset(features_path = "../data/features.pt", cap_path = "../data/captions.txt", vocab = vocab, split = "validation")
+train_dataset = ImageDataset(features_path = features_path, cap_path = captions_path, vocab = vocab, split = "train")
+val_dataset = ImageDataset(features_path = features_path, cap_path = captions_path, vocab = vocab, split = "validation")
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model = ImageCaptionModel(input_dim=input_dim, embed_size = 128, hidden_size=32, vocab_size = vocab_size, dropout = 0.2).to(device)
+model = ImageCaptionModel(input_dim=input_dim, embed_size = embed_size, hidden_size = hidden_size, vocab_size = vocab_size, dropout = dropout).to(device)
 criterion = nn.CrossEntropyLoss(ignore_index=0) # The padding index 0 will be ignored
-optimizer = torch.optim.Adam(params=model.parameters(), lr=0.001, weight_decay=1e-5)
+optimizer = torch.optim.Adam(params=model.parameters(), lr = lr, weight_decay = weight_decay)
 
-train_loader = DataLoader(dataset = train_dataset, batch_size=256, collate_fn=collate_fn, shuffle = True)
-val_loader = DataLoader(dataset = val_dataset, batch_size=256, collate_fn=collate_fn, shuffle = True)
+train_loader = DataLoader(dataset = train_dataset, batch_size = batch_size, collate_fn = collate_fn, shuffle = True)
+val_loader = DataLoader(dataset = val_dataset, batch_size = batch_size, collate_fn = collate_fn, shuffle = True)
 
 print("Starting training...")
 
 train_losses = []
 val_losses= []
 
-num_epochs = 200
-best_val_loss = 1e9
+best_val_loss = float("inf")
 for epoch in range(num_epochs):
 
     avg_loss = 0
@@ -44,10 +64,10 @@ for epoch in range(num_epochs):
 
     train_losses.append(avg_loss)
 
-    if epoch%10 == 9:
+    if (epoch+1)%10 == 0:
         print(f"Epoch {epoch}/{num_epochs}, avg loss: {avg_loss}")
 
-    if epoch%20 == 19:
+    if (epoch+1)%20 == 0:
         val_loss = 0
         for batch in val_loader:
             features, captions = batch
@@ -63,8 +83,8 @@ for epoch in range(num_epochs):
         val_losses.append(val_loss)
 
         if val_loss < best_val_loss:
-            save_checkpoint(model=model, optimizer=optimizer, filepath = "../checkpoints/checkpoint.pth")
+            save_checkpoint(model=model, optimizer=optimizer, filepath = checkpoints_path+"checkpoint.pth")
             best_val_loss = val_loss
 
-    if epoch%100 == 99:
-        plot_loss(train_losses, val_losses, "../plots/train_loss.png")
+    if (epoch+1)%100 == 0:
+        plot_loss(train_losses, val_losses, plots_path + "train_loss.png")

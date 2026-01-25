@@ -1,0 +1,17 @@
+data:
+  folder_path: "../data/"
+  words_freq_threshold: 10
+clip:
+  input_dim: 768
+model_params:
+  embed_size: 128
+  hidden_size: 32
+training:
+  epochs: 300
+  batch_size: 256
+  lr: 0.001
+  dropout: 0.2
+  weight_decay: 1e-5
+saving:
+  plots_path: "../plots/"
+  checkpoints_path: "../checkpoints/"
