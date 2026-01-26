@@ -1,10 +1,11 @@
-import torch
 import argparse
+
+import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
-from .model import ImageCaptionModel
-from .dataset import Vocabulary, collate_fn
-from .dataset import ImageDataset
+
+from src.dataset import ImageDataset, Vocabulary, collate_fn
+from src.model import ImageCaptionModel
 
 def evaluate(model : ImageCaptionModel, data_loader : DataLoader, criterion : nn.Module, device : torch.device):
     model.eval()
@@ -41,5 +42,5 @@ if __name__ == "__main__":
     test_loader = DataLoader(dataset = eval_dataset, batch_size=256, collate_fn=collate_fn, shuffle = True)
     criterion = nn.CrossEntropyLoss(ignore_index=0) # The padding index 0 will be ignored
 
-    evaluate(icg_model, test_loader, criterion, device)
-
+    loss = evaluate(icg_model, test_loader, criterion, device)
+    print(f"Test loss: {loss}")

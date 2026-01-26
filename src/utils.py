@@ -2,7 +2,8 @@ import re
 import torch
 import matplotlib.pyplot as plt
 from typing import List
-from .model import ImageCaptionModel
+
+from src.model import ImageCaptionModel
 
 def plot_loss(train_loss: List[float], val_loss: List[float], save_path: str, val_interval: int = 20) -> None:
 

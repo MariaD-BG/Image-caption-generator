@@ -1,5 +1,5 @@
 data:
-  folder_path: "../data/"
+  folder_path: "data/"
   words_freq_threshold: 10
 clip:
   input_dim: 768
@@ -13,5 +13,5 @@ training:
   dropout: 0.2
   weight_decay: 1e-5
 saving:
-  plots_path: "../plots/"
-  checkpoints_path: "../checkpoints/"
+  plots_path: "plots/"
+  checkpoints_path: "checkpoints/"

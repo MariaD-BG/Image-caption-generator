@@ -1,12 +1,12 @@
+import os
+
 import streamlit as st
 import torch
 from PIL import Image
-import os
 from transformers import CLIPProcessor, CLIPVisionModel, BlipProcessor, BlipForConditionalGeneration
 
-from clipLSTM.model import ImageCaptionModel
-from clipLSTM.dataset import Vocabulary
-from baselines.baseline import generate_baseline_caption
+from src import ImageCaptionModel, Vocabulary
+from baseline import generate_baseline_caption
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 CHECKPOINT_PATH = "checkpoints/checkpoint.pth"

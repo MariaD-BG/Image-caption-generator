@@ -1,8 +1,6 @@
-import torch
 import time
-import numpy as np
-from PIL import Image
-from typing import List
+
+import torch
 from transformers import CLIPProcessor, CLIPVisionModel
 
 # Load CLIP (to use as encoder model)

@@ -1,11 +1,12 @@
-import torch
 import argparse
-from PIL import Image
 import os
+
+import torch
+from PIL import Image
 from transformers import CLIPProcessor, CLIPVisionModel
 
-from model import ImageCaptionModel
-from dataset import Vocabulary
+from src.dataset import Vocabulary
+from src.model import ImageCaptionModel
 
 def get_clip_features(image_path, processor, vision_model, device):
     """

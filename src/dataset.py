@@ -1,13 +1,12 @@
 import torch
 import tqdm
 import numpy as np
-from typing import Tuple, List
-from .utils import strip_syntax
+from typing import Tuple
 from collections import Counter
-from pathlib import Path
-from PIL import Image
 from torchvision import transforms
 from torch.nn.utils.rnn import pad_sequence
+
+from src.utils import strip_syntax
 
 class Vocabulary:
     """

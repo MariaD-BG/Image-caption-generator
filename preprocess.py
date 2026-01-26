@@ -1,11 +1,13 @@
-import torch
-import tqdm
 import time
 from pathlib import Path
-from PIL import Image
 from typing import List
+
+import torch
+import tqdm
+from PIL import Image
 from torchvision import transforms
-from .clip import extract_clip_features
+
+from src.clip import extract_clip_features
 
 transform = transforms.Compose([
     transforms.Resize((224, 224)),         # CLIP uses 224x224 images

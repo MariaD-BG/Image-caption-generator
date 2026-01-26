@@ -1,12 +1,13 @@
 import torch
-import yaml
 import torch.nn as nn
-from .model import ImageCaptionModel
-from torch.utils.data import Dataset, DataLoader
-from .dataset import Vocabulary, ImageDataset, collate_fn
-from .utils import plot_loss, save_checkpoint
+import yaml
+from torch.utils.data import DataLoader
 
-CONFIG_PATH = "config.yaml"
+from src import ImageCaptionModel, ImageDataset, Vocabulary
+from src.dataset import collate_fn
+from src.utils import plot_loss, save_checkpoint
+
+CONFIG_PATH = "src/config.yaml"
 
 with open(CONFIG_PATH, "r") as file:
     config = yaml.safe_load(file)
@@ -20,9 +21,9 @@ features_path = data_path + "features.pt"
 embed_size = config["model_params"]["embed_size"]
 hidden_size = config["model_params"]["hidden_size"]
 batch_size = config["training"]["batch_size"]
-lr = config["training"]["lr"]
-weight_decay = config["training"]["weight_decay"]
-dropout = config["training"]["dropout"]
+lr = float(config["training"]["lr"])
+weight_decay = float(config["training"]["weight_decay"])
+dropout = float(config["training"]["dropout"])
 num_epochs = config["training"]["epochs"]
 
 plots_path = config["saving"]["plots_path"]
