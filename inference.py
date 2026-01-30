@@ -84,11 +84,10 @@ def main(args):
 
     # Verify dimensions just in case
     if features.shape[1] != 768:
-        print(f"ERROR: Expected 768 dimensions, got {features.shape[1]}")
-        return
+        raise RuntimeError(f"ERROR: Expected 768 dimensions, got {features.shape[1]}")
 
     # Generate
-    caption_tokens = model.generate(features, vocab, max_len=20)
+    caption_tokens = model.generate(features, vocab, max_len=20)[0]
 
     caption = " ".join(caption_tokens)
     clean_caption = caption.replace("<SOS>", "").replace("<EOS>", "").strip()

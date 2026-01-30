@@ -1,6 +1,9 @@
 import torch
 import torch.nn as nn
 import numpy as np
+from typing import List
+
+from src.dataset import Vocabulary
 
 class ImageCaptionModel(nn.Module):
     def __init__(self, input_dim:int, embed_size:int, hidden_size:int, vocab_size:int, num_layers:int = 1, dropout:float = 0.0):
@@ -12,7 +15,7 @@ class ImageCaptionModel(nn.Module):
         self.linear_out = nn.Linear(hidden_size, vocab_size)
         self.dropout = torch.nn.Dropout(dropout)
 
-    def forward(self, features : np.ndarray, captions: np.ndarray):
+    def forward(self, features : np.ndarray, captions: np.ndarray) -> torch.tensor:
         """
             # features shape: (batch_size, input_dim)
             # captions shape: (batch_size, sequence_length)
@@ -35,13 +38,13 @@ class ImageCaptionModel(nn.Module):
         outputs = self.linear_out(lstm_out)
         return outputs
 
-    def generate(self, features, vocab, max_len=20):
-        result_tokens = []
+    def generate(self, features : torch.tensor, vocab: Vocabulary, max_len : int =20) -> List[str]:
         self.eval()
+        batch_size = features.shape[0]
+        result_tokens = [[] for _ in range(batch_size)]
 
         with torch.no_grad():
-            # 1. Feed the Image first to initialize the LSTM states (h, c)
-            # Shape: (1, 1, embed_size)
+
             inputs = self.linear_img(features).unsqueeze(1)
 
             # We run the LSTM once just to get the 'states' initialized with image info.
@@ -51,7 +54,7 @@ class ImageCaptionModel(nn.Module):
             # 2. Start the actual generation with the <SOS> token
             # We need to feed <SOS> to get the first real word (just like in training)
             start_token = vocab.stoi["<SOS>"]
-            inputs = self.embed(torch.tensor([[start_token]]).to(features.device))
+            inputs = self.embed(torch.tensor([start_token] * batch_size).unsqueeze(1).to(features.device))
 
             for _ in range(max_len):
                 # Pass inputs (token) and previous states (context from image + prev words)
@@ -61,16 +64,19 @@ class ImageCaptionModel(nn.Module):
                 output = self.linear_out(hiddens.squeeze(1))
                 predicted = output.argmax(1)
 
-                token_id = predicted.item()
+                token_ids = predicted.tolist()
 
-                # Stop if <EOS>
-                if vocab.itos[token_id] == "<EOS>":
+                result_tokens = [currlist + [elem] for currlist, elem in zip(result_tokens, token_ids)]
+
+                # Stop if all lists have <EOS>
+                if all([any([vocab.itos[token_id] == "<EOS>" for token_id in res]) for res in result_tokens]):
                     break
-
-                result_tokens.append(token_id)
 
                 # Prepare next input
                 inputs = self.embed(predicted).unsqueeze(1)
 
-        return [vocab.itos[idx] for idx in result_tokens]
+        result_tokens = [[vocab.itos[idx] for idx in res] for res in result_tokens]
+        final_captions = [sent[:sent.index("<EOS>")] if "<EOS>" in sent else sent for sent in result_tokens]
+
+        return final_captions
 

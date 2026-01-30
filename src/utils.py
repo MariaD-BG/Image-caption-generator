@@ -3,8 +3,6 @@ import torch
 import matplotlib.pyplot as plt
 from typing import List
 
-from src.model import ImageCaptionModel
-
 def plot_loss(train_loss: List[float], val_loss: List[float], save_path: str, val_interval: int = 20) -> None:
 
     plt.figure(figsize=(12, 6))
@@ -23,12 +21,3 @@ def plot_loss(train_loss: List[float], val_loss: List[float], save_path: str, va
 def strip_syntax(txt:str) ->str:
     cleaned_txt = re.sub(r'[^a-zA-Z ]', '', txt)
     return cleaned_txt
-
-def save_checkpoint(model : ImageCaptionModel, optimizer=None, filepath : str ="checkpoint.pth"):
-    checkpoint = {
-        'model_state_dict': model.state_dict()
-    }
-    if optimizer:
-        checkpoint['optimizer_state_dict'] = optimizer.state_dict()
-    torch.save(checkpoint, filepath)
-    print(f"Checkpoint saved to {filepath}")

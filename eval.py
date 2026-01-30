@@ -3,11 +3,15 @@ import argparse
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
+from torchmetrics.text import BLEUScore, METEORScore
 
 from src.dataset import ImageDataset, Vocabulary, collate_fn
 from src.model import ImageCaptionModel
 
-def evaluate(model : ImageCaptionModel, data_loader : DataLoader, criterion : nn.Module, device : torch.device):
+meteor = METEORScore()
+bleu = BLEUScore(n_gram=4)
+
+def evaluate(model : ImageCaptionModel, data_loader : DataLoader, criterion : nn.Module, device : torch.device) -> float:
     model.eval()
     total_loss = 0
 
@@ -20,6 +24,33 @@ def evaluate(model : ImageCaptionModel, data_loader : DataLoader, criterion : nn
             total_loss += loss.item()
 
     return total_loss / len(data_loader)
+
+def bleu_test(model: ImageCaptionModel, data_loader: DataLoader, vocab: Vocabulary, device: torch.device):
+    model.eval()
+
+    total_bleu = 0
+    total_meteor = 0
+
+    with torch.no_grad():
+        for features, captions in data_loader:
+            features, captions = features.to(device), captions.to(device)
+            gen = model.generate(features, vocab)
+            caps_list = [captions[i].tolist() for i in range(captions.shape[0])]
+            caps_str = [ [vocab.itos[x] for x in res] for res in caps_list ]
+            caps_str = [sent[:sent.index("<EOS>")] if "<EOS>" in sent else sent for sent in caps_str]
+            caps_str = [s[1:] for s in caps_str]
+
+            generated = [" ".join(x) for x in gen]
+            caption = [" ".join(x) for x in caps_str]
+
+            gt = [[c] for c in caption]
+
+            total_bleu += bleu(generated, gt)
+            total_meteor += meteor(generated, gt)
+
+    return total_bleu / len(data_loader), total_meteor/len(data_loader)
+
+
 
 if __name__ == "__main__":
 
@@ -44,3 +75,6 @@ if __name__ == "__main__":
 
     loss = evaluate(icg_model, test_loader, criterion, device)
     print(f"Test loss: {loss}")
+    bleu_s, meteor_s = bleu_test(icg_model, test_loader, vocab, device)
+    print(f"Test bleu: {bleu_s}")
+    print(f"Test meteor: {meteor_s}")

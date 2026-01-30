@@ -5,7 +5,16 @@ from torch.utils.data import DataLoader
 
 from src import ImageCaptionModel, ImageDataset, Vocabulary
 from src.dataset import collate_fn
-from src.utils import plot_loss, save_checkpoint
+from src.utils import plot_loss
+
+def save_checkpoint(model : ImageCaptionModel, optimizer=None, filepath : str ="checkpoint.pth"):
+    checkpoint = {
+        'model_state_dict': model.state_dict()
+    }
+    if optimizer:
+        checkpoint['optimizer_state_dict'] = optimizer.state_dict()
+    torch.save(checkpoint, filepath)
+    print(f"Checkpoint saved to {filepath}")
 
 CONFIG_PATH = "src/config.yaml"
 
@@ -20,6 +29,7 @@ features_path = data_path + "features.pt"
 
 embed_size = config["model_params"]["embed_size"]
 hidden_size = config["model_params"]["hidden_size"]
+
 batch_size = config["training"]["batch_size"]
 lr = float(config["training"]["lr"])
 weight_decay = float(config["training"]["weight_decay"])
@@ -56,7 +66,9 @@ for epoch in range(num_epochs):
         features, captions = batch
         features, captions = features.to(device), captions.to(device)
         output = model(features, captions)
+
         loss = criterion(output.permute(0, 2, 1)[:,:,1:], captions[:, 1:])
+
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
