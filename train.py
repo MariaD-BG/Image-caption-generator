@@ -90,25 +90,22 @@ for epoch in range(num_epochs):
     if (epoch+1)%10 == 0:
         print(f"Epoch {epoch+1}/{num_epochs}, avg loss: {avg_loss}")
 
-    if (epoch+1)%20 == 0:
-        model.eval()
-        val_loss = 0
-        for batch in val_loader:
-            features, captions = batch
-            features, captions = features.to(device), captions.to(device)
-            with torch.no_grad():
-                outputs = model(features, captions)
-                loss = criterion(outputs.reshape(-1, vocab_size), captions.reshape(-1))
+    model.eval()
+    val_loss = 0
+    for batch in val_loader:
+        features, captions = batch
+        features, captions = features.to(device), captions.to(device)
+        with torch.no_grad():
+            outputs = model(features, captions)
+            loss = criterion(outputs.reshape(-1, vocab_size), captions.reshape(-1))
+        val_loss += loss.item()
+    val_loss = val_loss / len(val_loader)
+    print(f"Calculated validation loss at epoch {epoch+1}: {val_loss}")
+    val_losses.append(val_loss)
 
-            val_loss += loss.item()
-        val_loss = val_loss / len(val_loader)
+    if val_loss < best_val_loss:
+        save_checkpoint(model=model, optimizer=optimizer, filepath = checkpoints_path+"checkpoint.pth")
+        best_val_loss = val_loss
 
-        print(f"Calculated validation loss at epoch {epoch+1}: {val_loss}")
-        val_losses.append(val_loss)
-
-        if val_loss < best_val_loss:
-            save_checkpoint(model=model, optimizer=optimizer, filepath = checkpoints_path+"checkpoint.pth")
-            best_val_loss = val_loss
-
-    if (epoch+1)%100 == 0:
-        plot_loss(train_losses, val_losses, plots_path + "train_loss.png")
+    if (epoch+1)%10 == 0:
+        plot_loss(train_losses, val_losses, plots_path + "train_loss.png", val_interval=1)
