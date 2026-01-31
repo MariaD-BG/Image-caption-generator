@@ -1,5 +1,6 @@
 import torch
 import tqdm
+import re
 from typing import Tuple
 from torch.nn.utils.rnn import pad_sequence
 from transformers import CLIPTokenizer
@@ -22,7 +23,8 @@ class ImageDataset(torch.utils.data.Dataset):
         with open(cap_path, "r") as f:
             for line in tqdm.tqdm(f):
                 img_name, cap = line.split(",", maxsplit=1)
-                cap = cap.lower().rstrip(' ')
+                # Remove punctuation, convert to lowercase, and strip whitespace
+                cap = re.sub(r'[^\w\s]', '', cap).lower().strip()
                 if img_name not in available_imgs:
                     continue
                 self.data.append((self.features_dict[img_name], cap))
