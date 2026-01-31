@@ -1,11 +1,9 @@
 data:
   folder_path: "data/"
-  words_freq_threshold: 10
-clip:
   input_dim: 768
 model_params:
-  embed_size: 128
-  hidden_size: 32
+  embed_size: 512
+  hidden_size: 512
 training:
   epochs: 300
   batch_size: 256

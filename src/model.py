@@ -2,8 +2,7 @@ import torch
 import torch.nn as nn
 import numpy as np
 from typing import List
-
-from src.dataset import Vocabulary
+from transformers import CLIPTokenizer
 
 class ImageCaptionModel(nn.Module):
     def __init__(self, input_dim:int, embed_size:int, hidden_size:int, vocab_size:int, num_layers:int = 1, dropout:float = 0.0):
@@ -14,6 +13,9 @@ class ImageCaptionModel(nn.Module):
         self.lstm = nn.LSTM(embed_size, hidden_size, num_layers, batch_first=True)
         self.linear_out = nn.Linear(hidden_size, vocab_size)
         self.dropout = torch.nn.Dropout(dropout)
+        self.tokenizer = CLIPTokenizer.from_pretrained("openai/clip-vit-base-patch32")
+        self.vocab_size = self.tokenizer.vocab_size
+
 
     def forward(self, features : np.ndarray, captions: np.ndarray) -> torch.tensor:
         """
@@ -38,45 +40,64 @@ class ImageCaptionModel(nn.Module):
         outputs = self.linear_out(lstm_out)
         return outputs
 
-    def generate(self, features : torch.tensor, vocab: Vocabulary, max_len : int =20) -> List[str]:
+    def generate(self, features: torch.tensor, max_len: int = 20, beam_width: int = 5) -> List[str]:
+        return self.beam_search(features, max_len, beam_width)
+
+    def beam_search(self, features: torch.tensor, max_len: int = 20, beam_width: int = 5) -> List[str]:
         self.eval()
         batch_size = features.shape[0]
-        result_tokens = [[] for _ in range(batch_size)]
 
         with torch.no_grad():
-
             inputs = self.linear_img(features).unsqueeze(1)
-
-            # We run the LSTM once just to get the 'states' initialized with image info.
-            # We DO NOT use the output of this step because we didn't train on it.
             _, states = self.lstm(inputs)
 
-            # 2. Start the actual generation with the <SOS> token
-            # We need to feed <SOS> to get the first real word (just like in training)
-            start_token = vocab.stoi["<SOS>"]
-            inputs = self.embed(torch.tensor([start_token] * batch_size).unsqueeze(1).to(features.device))
+            # Start with the <SOS> token
+            start_token = self.tokenizer.bos_token_id
+            
+            # Initialize beams
+            beams = [[(torch.tensor([start_token]).to(features.device), 0.0, states)] for _ in range(batch_size)]
+            final_captions = [[] for _ in range(batch_size)]
 
             for _ in range(max_len):
-                # Pass inputs (token) and previous states (context from image + prev words)
-                hiddens, states = self.lstm(inputs, states)
+                for i in range(batch_size):
+                    if not beams[i]:
+                        continue
 
-                # Predict next word
-                output = self.linear_out(hiddens.squeeze(1))
-                predicted = output.argmax(1)
+                    new_candidates = []
+                    for sequence, score, states in beams[i]:
+                        if sequence[-1] == self.tokenizer.eos_token_id:
+                            final_captions[i].append((sequence, score))
+                            continue
+                        
+                        inputs = self.embed(sequence[-1].unsqueeze(0).unsqueeze(0))
+                        hiddens, new_states = self.lstm(inputs, states)
+                        output = self.linear_out(hiddens.squeeze(1))
+                        
+                        # Use log_softmax for numerical stability
+                        log_probs = torch.nn.functional.log_softmax(output, dim=1)
+                        top_k_log_probs, top_k_indices = torch.topk(log_probs, beam_width, dim=1)
 
-                token_ids = predicted.tolist()
+                        for k in range(beam_width):
+                            new_seq = torch.cat([sequence, top_k_indices[0, k].unsqueeze(0)])
+                            new_score = score + top_k_log_probs[0, k].item()
+                            new_candidates.append((new_seq, new_score, new_states))
+                    
+                    # Sort candidates by score and select top beam_width
+                    beams[i] = sorted(new_candidates, key=lambda x: x[1], reverse=True)[:beam_width]
 
-                result_tokens = [currlist + [elem] for currlist, elem in zip(result_tokens, token_ids)]
+            for i in range(batch_size):
+                # If no complete caption was found, use the best available beam
+                if not final_captions[i]:
+                    final_captions[i] = [(beams[i][0][0], beams[i][0][1])] if beams[i] else []
 
-                # Stop if all lists have <EOS>
-                if all([any([vocab.itos[token_id] == "<EOS>" for token_id in res]) for res in result_tokens]):
-                    break
 
-                # Prepare next input
-                inputs = self.embed(predicted).unsqueeze(1)
+            # Decode the final captions
+            decoded_captions = []
+            for i in range(batch_size):
+                if final_captions[i]:
+                    best_seq, _ = max(final_captions[i], key=lambda x: x[1])
+                    decoded_captions.append(self.tokenizer.decode(best_seq, skip_special_tokens=True))
+                else:
+                    decoded_captions.append("") # Or some default caption
 
-        result_tokens = [[vocab.itos[idx] for idx in res] for res in result_tokens]
-        final_captions = [sent[:sent.index("<EOS>")] if "<EOS>" in sent else sent for sent in result_tokens]
-
-        return final_captions
-
+        return decoded_captions

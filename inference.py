@@ -3,9 +3,8 @@ import os
 
 import torch
 from PIL import Image
-from transformers import CLIPProcessor, CLIPVisionModel
+from transformers import CLIPProcessor, CLIPVisionModel, CLIPTokenizer
 
-from src.dataset import Vocabulary
 from src.model import ImageCaptionModel
 
 def get_clip_features(image_path, processor, vision_model, device):
@@ -25,11 +24,9 @@ def get_clip_features(image_path, processor, vision_model, device):
         outputs = vision_model(**inputs)
 
         # 'pooler_output' is the (1, 768) vector from the CLS token
-        # It is NOT the projected (1, 512) vector.
         feature_vector = outputs.pooler_output
 
         # Optional: Normalize.
-        # Since you divided by norm in your clip.py snippet, we must do it here too.
         features_norm = feature_vector / torch.linalg.norm(feature_vector, dim=1, keepdims=True)
 
     return features_norm.float()
@@ -38,35 +35,34 @@ def main(args):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
 
-    # --- 1. Load Vocabulary ---
-    print("Loading vocabulary...")
-    vocab = Vocabulary(freq_threshold=10)
-    vocab.build_vocabulary(captions_path=args.captions_path)
-    vocab_size = len(vocab)
+    # --- 1. Load Tokenizer ---
+    print("Loading tokenizer...")
+    tokenizer = CLIPTokenizer.from_pretrained("openai/clip-vit-base-patch32")
+    vocab_size = tokenizer.vocab_size
 
     # --- 2. Load CLIP (Vision Model Only) ---
-    # We use the exact same model you used for training
     model_name = "openai/clip-vit-base-patch32"
     print(f"Loading CLIP backbone: {model_name}...")
 
     processor = CLIPProcessor.from_pretrained(model_name)
-    # CLIPVisionModel is the key here. It returns 768 dims for ViT-Base.
     vision_model = CLIPVisionModel.from_pretrained(model_name).to(device)
     vision_model.eval()
 
     # --- 3. Load Caption Model ---
     print("Loading Caption Model...")
+    # These sizes should match the saved model's config
+    embed_size = 512
+    hidden_size = 512
     model = ImageCaptionModel(
-        input_dim=768,   # Matches the Raw ViT-Base output
-        embed_size=128,
-        hidden_size=32,
+        input_dim=768,
+        embed_size=embed_size,
+        hidden_size=hidden_size,
         vocab_size=vocab_size,
         dropout=0.2
     ).to(device)
 
     if os.path.exists(args.checkpoint):
         checkpoint = torch.load(args.checkpoint, map_location=device)
-        # Handle state dict loading
         state_dict = checkpoint['model_state_dict']
         model.load_state_dict(state_dict)
         print("Checkpoint loaded.")
@@ -82,24 +78,19 @@ def main(args):
 
     if features is None: return
 
-    # Verify dimensions just in case
     if features.shape[1] != 768:
         raise RuntimeError(f"ERROR: Expected 768 dimensions, got {features.shape[1]}")
 
     # Generate
-    caption_tokens = model.generate(features, vocab, max_len=20)[0]
-
-    caption = " ".join(caption_tokens)
-    clean_caption = caption.replace("<SOS>", "").replace("<EOS>", "").strip()
+    caption = model.generate(features, max_len=20)[0]
 
     print("\n" + "="*30)
-    print(f"RESULT: {clean_caption}")
+    print(f"RESULT: {caption}")
     print("="*30 + "\n")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--image", type=str, required=True, help="Path to image")
-    parser.add_argument("--checkpoint", type=str, default="checkpoint.pth")
-    parser.add_argument("--captions_path", type=str, default="data/captions.txt")
+    parser.add_argument("--checkpoint", type=str, default="checkpoints/checkpoint.pth")
     args = parser.parse_args()
     main(args)

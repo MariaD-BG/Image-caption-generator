@@ -1,9 +1,11 @@
+import time
 import torch
 import torch.nn as nn
 import yaml
 from torch.utils.data import DataLoader
+from transformers import CLIPTokenizer
 
-from src import ImageCaptionModel, ImageDataset, Vocabulary
+from src import ImageCaptionModel, ImageDataset
 from src.dataset import collate_fn
 from src.utils import plot_loss
 
@@ -21,8 +23,7 @@ CONFIG_PATH = "src/config.yaml"
 with open(CONFIG_PATH, "r") as file:
     config = yaml.safe_load(file)
 
-input_dim = config["clip"]["input_dim"]
-freq_thredhold = config["data"]["words_freq_threshold"]
+input_dim = config["data"]["input_dim"]
 data_path = config["data"]["folder_path"]
 captions_path = data_path + "captions.txt"
 features_path = data_path + "features.pt"
@@ -39,15 +40,15 @@ num_epochs = config["training"]["epochs"]
 plots_path = config["saving"]["plots_path"]
 checkpoints_path = config["saving"]["checkpoints_path"]
 
-vocab = Vocabulary(freq_threshold = freq_thredhold)
-vocab.build_vocabulary(captions_path = captions_path)
-vocab_size = len(vocab)
-train_dataset = ImageDataset(features_path = features_path, cap_path = captions_path, vocab = vocab, split = "train")
-val_dataset = ImageDataset(features_path = features_path, cap_path = captions_path, vocab = vocab, split = "validation")
+tokenizer = CLIPTokenizer.from_pretrained("openai/clip-vit-base-patch32")
+vocab_size = tokenizer.vocab_size
+
+train_dataset = ImageDataset(features_path = features_path, cap_path = captions_path, split = "train")
+val_dataset = ImageDataset(features_path = features_path, cap_path = captions_path, split = "validation")
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model = ImageCaptionModel(input_dim=input_dim, embed_size = embed_size, hidden_size = hidden_size, vocab_size = vocab_size, dropout = dropout).to(device)
-criterion = nn.CrossEntropyLoss(ignore_index=0) # The padding index 0 will be ignored
+criterion = nn.CrossEntropyLoss(ignore_index=tokenizer.pad_token_id)
 optimizer = torch.optim.Adam(params=model.parameters(), lr = lr, weight_decay = weight_decay)
 
 train_loader = DataLoader(dataset = train_dataset, batch_size = batch_size, collate_fn = collate_fn, shuffle = True)
@@ -61,38 +62,48 @@ val_losses= []
 best_val_loss = float("inf")
 for epoch in range(num_epochs):
 
+    print(f"Starting epoch...{epoch}")
+
+    epoch_start = time.time()
+
+    model.train()
     avg_loss = 0
     for batch in train_loader:
         features, captions = batch
         features, captions = features.to(device), captions.to(device)
-        output = model(features, captions)
 
-        loss = criterion(output.permute(0, 2, 1)[:,:,1:], captions[:, 1:])
+        outputs = model(features, captions)
+        loss = criterion(outputs.reshape(-1, vocab_size), captions.reshape(-1))
 
         optimizer.zero_grad()
         loss.backward()
+        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
         optimizer.step()
         avg_loss += loss.item()
     avg_loss = avg_loss / len(train_loader)
 
     train_losses.append(avg_loss)
 
+    epoch_end = time.time()
+    print(f"Completed epoch {epoch} in {epoch_end - epoch_start}s")
+
     if (epoch+1)%10 == 0:
-        print(f"Epoch {epoch}/{num_epochs}, avg loss: {avg_loss}")
+        print(f"Epoch {epoch+1}/{num_epochs}, avg loss: {avg_loss}")
 
     if (epoch+1)%20 == 0:
+        model.eval()
         val_loss = 0
         for batch in val_loader:
             features, captions = batch
             features, captions = features.to(device), captions.to(device)
             with torch.no_grad():
-                output = model(features, captions)
-                loss = criterion(output.permute(0, 2, 1)[:,:,1:], captions[:, 1:])
+                outputs = model(features, captions)
+                loss = criterion(outputs.reshape(-1, vocab_size), captions.reshape(-1))
 
             val_loss += loss.item()
         val_loss = val_loss / len(val_loader)
 
-        print(f"Calculated validation loss at epoch {epoch}: {val_loss}")
+        print(f"Calculated validation loss at epoch {epoch+1}: {val_loss}")
         val_losses.append(val_loss)
 
         if val_loss < best_val_loss:
