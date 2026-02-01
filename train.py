@@ -67,7 +67,7 @@ for epoch in range(num_epochs):
     epoch_start = time.time()
 
     model.train()
-    avg_loss = 0
+    avg_loss = 0.0
     for batch in train_loader:
         features, captions = batch
         features, captions = features.to(device), captions.to(device)
@@ -91,7 +91,7 @@ for epoch in range(num_epochs):
         print(f"Epoch {epoch+1}/{num_epochs}, avg loss: {avg_loss}")
 
     model.eval()
-    val_loss = 0
+    val_loss = 0.0
     for batch in val_loader:
         features, captions = batch
         features, captions = features.to(device), captions.to(device)

@@ -1,5 +1,6 @@
 import argparse
 import yaml
+import tqdm
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
@@ -32,7 +33,7 @@ def bleu_test(model: ImageCaptionModel, data_loader: DataLoader, tokenizer: CLIP
     total_bleu = 0
 
     with torch.no_grad():
-        for features, captions in data_loader:
+        for features, captions in tqdm.tqdm(data_loader):
             features = features.to(device)
             gen = model.generate(features)
 

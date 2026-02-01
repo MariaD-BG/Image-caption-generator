@@ -7,19 +7,19 @@ import tqdm
 from PIL import Image
 from transformers import CLIPProcessor
 
-def calc_and_save(img_folder: str, img_names: List[str], processor: CLIPProcessor, device: torch.device) -> dict[str, torch.tensor]:
-    
+def calc_and_save(img_folder: str, img_names: List[str], processor: CLIPProcessor, device: torch.device) -> dict[str, torch.Tensor]:
+
     images = [Image.open(Path(img_folder) / img_name).convert("RGB") for img_name in img_names]
-    
+
     inputs = processor(images=images, return_tensors="pt").to(device)
 
     with torch.no_grad():
         features = model(**inputs).pooler_output.cpu()
-    
+
     features_norm = features / torch.linalg.norm(features, dim=1, keepdims=True)
-    
+
     features_dict = {img_name: feature for img_name, feature in zip(img_names, features_norm)}
-    
+
     return features_dict
 
 if __name__ == "__main__":
@@ -38,7 +38,7 @@ if __name__ == "__main__":
     data_folder = Path("data")
     img_folder = data_folder / "Images"
     save_path = data_folder / "features.pt"
-    
+
     img_names = [p.name for p in img_folder.iterdir() if p.is_file()]
 
     features_dict = {}

@@ -4,6 +4,7 @@ test_images/
 checkpoints/
 plots/
 __pycache__/
+.mypy_cache/
 *.pyc
 *.pyo
 *.pyd

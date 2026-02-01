@@ -5,15 +5,14 @@ import torch
 from PIL import Image
 from transformers import CLIPProcessor, CLIPVisionModel, BlipProcessor, BlipForConditionalGeneration
 
-from src import ImageCaptionModel, Vocabulary
+from src import ImageCaptionModel
 from baseline import generate_baseline_caption
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 CHECKPOINT_PATH = "checkpoints/checkpoint.pth"
 CAPTIONS_PATH = "data/captions.txt"
-CLIP_MODEL_NAME = "openai/clip-vit-base-patch32" # 512 backbone, 768 output
+CLIP_MODEL_NAME = "openai/clip-vit-base-patch32"
 
-# --- CACHING RESOURCES ---
 # @st.cache_resource is CRITICAL. It loads the models only once.
 # Without this, the app would reload the heavy models every time you click a button.
 @st.cache_resource
