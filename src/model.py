@@ -49,6 +49,7 @@ class ImageCaptionModel(nn.Module):
 
         with torch.no_grad():
             
+            image_embeds = self.linear_img(features).unsqueeze(1)
             _, initial_states = self.lstm(image_embeds) # initial_states = (h_n, c_n) both of shape (1, batch_size, hidden_size)
 
             # Start with the <SOS> token
