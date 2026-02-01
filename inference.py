@@ -1,5 +1,6 @@
 import argparse
 import os
+import yaml
 
 import torch
 from PIL import Image
@@ -50,15 +51,19 @@ def main(args):
 
     # --- 3. Load Caption Model ---
     print("Loading Caption Model...")
-    # These sizes should match the saved model's config
-    embed_size = 512
-    hidden_size = 512
+
+    CONFIG_PATH = "src/config.yaml"
+
+    with open(CONFIG_PATH, "r") as file:
+        config = yaml.safe_load(file)
+
+
     model = ImageCaptionModel(
-        input_dim=768,
-        embed_size=embed_size,
-        hidden_size=hidden_size,
+        input_dim=config["data"]["input_dim"],
+        embed_size=config["model_params"]["embed_size"],
+        hidden_size=config["model_params"]["hidden_size"],
         vocab_size=vocab_size,
-        dropout=0.2
+        dropout=config["training"]["dropout"]
     ).to(device)
 
     if os.path.exists(args.checkpoint):
