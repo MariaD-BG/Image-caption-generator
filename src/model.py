@@ -48,14 +48,21 @@ class ImageCaptionModel(nn.Module):
         batch_size = features.shape[0]
 
         with torch.no_grad():
-            inputs = self.linear_img(features).unsqueeze(1)
-            _, states = self.lstm(inputs)
+            
+            _, initial_states = self.lstm(image_embeds) # initial_states = (h_n, c_n) both of shape (1, batch_size, hidden_size)
 
             # Start with the <SOS> token
             start_token = self.tokenizer.bos_token_id
             
             # Initialize beams
-            beams = [[(torch.tensor([start_token]).to(features.device), 0.0, states)] for _ in range(batch_size)]
+            beams = []
+            for i in range(batch_size):
+                # Extract the initial hidden and cell states for this specific image 'i'
+                h_i = initial_states[0][:, i:i+1, :] # shape (1, 1, hidden_size)
+                c_i = initial_states[1][:, i:i+1, :] # shape (1, 1, hidden_size)
+                initial_state_for_image = (h_i, c_i)
+                beams.append([(torch.tensor([start_token]).to(features.device), 0.0, initial_state_for_image)])
+            
             final_captions = [[] for _ in range(batch_size)]
 
             for _ in range(max_len):
@@ -64,13 +71,13 @@ class ImageCaptionModel(nn.Module):
                         continue
 
                     new_candidates = []
-                    for sequence, score, states in beams[i]:
+                    for sequence, score, current_states in beams[i]: # Use current_states for the beam
                         if sequence[-1] == self.tokenizer.eos_token_id:
                             final_captions[i].append((sequence, score))
                             continue
                         
                         inputs = self.embed(sequence[-1].unsqueeze(0).unsqueeze(0))
-                        hiddens, new_states = self.lstm(inputs, states)
+                        hiddens, new_states = self.lstm(inputs, current_states)
                         output = self.linear_out(hiddens.squeeze(1))
                         
                         # Use log_softmax for numerical stability
