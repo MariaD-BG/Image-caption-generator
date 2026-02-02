@@ -9,7 +9,7 @@ from src import ImageCaptionModel
 from baseline import generate_baseline_caption # Assuming baseline.py exists with this function
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-CHECKPOINT_PATH = "checkpoints/checkpoint.pth"
+CHECKPOINT_PATH = "checkpoints/checkpoint_trained.pth"
 CAPTIONS_PATH = "data/captions.txt" # Not directly used for vocab in app.py anymore, but kept for context if needed
 CLIP_MODEL_NAME = "openai/clip-vit-base-patch32"
 
@@ -42,8 +42,7 @@ def load_models():
         my_model.eval()
     else:
         st.error(f"Error: Checkpoint not found at {CHECKPOINT_PATH}. Please train your model first.")
-        # Optionally, raise an exception to stop the app
-        # raise FileNotFoundError(f"Checkpoint not found at {CHECKPOINT_PATH}")
+        raise FileNotFoundError(f"Checkpoint not found at {CHECKPOINT_PATH}")
 
     # 3. Baseline Model (BLIP)
     blip_processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
@@ -101,7 +100,7 @@ def main():
 
     if uploaded_file is not None:
         # Display Image
-        image = Image.Image.open(uploaded_file).convert("RGB") # Use Image.Image from PIL
+        image = Image.open(uploaded_file).convert("RGB") # Use Image from PIL
         st.image(image, caption="Uploaded Image", use_container_width=True)
 
         # Generate Button
