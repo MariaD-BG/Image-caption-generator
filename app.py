@@ -1,16 +1,27 @@
+"""
+Script for running an app for comparison between custom and baseline model
+Allows user to upload an image
+"""
 import os
+import yaml
 
 import streamlit as st
 import torch
-from PIL import Image
-from transformers import CLIPProcessor, CLIPVisionModel, BlipProcessor, BlipForConditionalGeneration
+from PIL import Image, UnidentifiedImageError
+from transformers import(
+    CLIPProcessor,
+    CLIPVisionModel,
+    BlipProcessor,
+    BlipForConditionalGeneration,
+)
 
-from src import ImageCaptionModel
-from baseline import generate_baseline_caption # Assuming baseline.py exists with this function
+from src import ImageCaptionModel, ModelConfig
+from baseline import generate_baseline_caption
 
+CONFIG_PATH = "src/config.yaml"
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 CHECKPOINT_PATH = "checkpoints/checkpoint_trained.pth"
-CAPTIONS_PATH = "data/captions.txt" # Not directly used for vocab in app.py anymore, but kept for context if needed
+CAPTIONS_PATH = "data/captions.txt"
 CLIP_MODEL_NAME = "openai/clip-vit-base-patch32"
 
 # --- MODEL LOADING ---
@@ -18,7 +29,7 @@ CLIP_MODEL_NAME = "openai/clip-vit-base-patch32"
 def load_models():
     """
     Loads all necessary models and processors, caching them to avoid
-    reloading on every Streamlit rerun.
+    reloading on every Streamlit rerun
     """
     # 1. CLIP for feature extraction for custom model
     clip_processor = CLIPProcessor.from_pretrained(CLIP_MODEL_NAME)
@@ -27,26 +38,36 @@ def load_models():
 
     # 2. My Custom Image Captioning Model
     # Parameters must match those used during training (from src/config.yaml)
-    my_model = ImageCaptionModel(
-        input_dim=768,
-        embed_size=512, # Aligned with src/config.yaml
-        hidden_size=512, # Aligned with src/config.yaml
-        vocab_size=clip_processor.tokenizer.vocab_size, # Use CLIP's tokenizer vocab size
-        dropout=0.2 # Aligned with src/config.yaml
-    ).to(DEVICE)
+    with open(CONFIG_PATH, "r", encoding="utf-8") as file:
+        config = yaml.safe_load(file)
 
+    model_config = ModelConfig(
+        input_dim=config["data"]["input_dim"],
+        embed_size=config["model_params"]["embed_size"],
+        hidden_size=config["model_params"]["hidden_size"],
+        vocab_size=clip_processor.tokenizer.vocab_size,
+        num_layers=config["model_params"]["lstm_layers"],
+        dropout=config["training"]["dropout"]
+    )
+
+    my_model = ImageCaptionModel(model_config).to(DEVICE)
     if os.path.exists(CHECKPOINT_PATH):
         checkpoint = torch.load(CHECKPOINT_PATH, map_location=DEVICE)
         state_dict = checkpoint['model_state_dict']
         my_model.load_state_dict(state_dict)
         my_model.eval()
     else:
-        st.error(f"Error: Checkpoint not found at {CHECKPOINT_PATH}. Please train your model first.")
+        st.error(f"Error: Checkpoint not found at {CHECKPOINT_PATH}. \
+                  Please train your model first.")
         raise FileNotFoundError(f"Checkpoint not found at {CHECKPOINT_PATH}")
 
     # 3. Baseline Model (BLIP)
-    blip_processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
-    blip_model = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-base").to(DEVICE)
+    blip_processor = BlipProcessor.from_pretrained(
+        "Salesforce/blip-image-captioning-base"
+    )
+    blip_model = BlipForConditionalGeneration.from_pretrained(
+        "Salesforce/blip-image-captioning-base"
+    ).to(DEVICE)
 
     # Return all loaded components
     return clip_processor, clip_model, my_model, blip_processor, blip_model
@@ -54,7 +75,7 @@ def load_models():
 # --- HELPER FUNCTIONS FOR CAPTION GENERATION ---
 def generate_my_caption(image, processor, encoder, model):
     """
-    Generates a caption using the custom CLIP+LSTM model.
+    Generates a caption using the custom CLIP+LSTM model
     """
     # Preprocess image using CLIP processor
     inputs = processor(images=image, return_tensors="pt").to(DEVICE)
@@ -72,14 +93,18 @@ def generate_my_caption(image, processor, encoder, model):
 
     return caption
 
-# --- MAIN STREAMLIT APP UI ---
-def main():
+def main() -> None:
+    """main script to run app"""
     st.set_page_config(page_title="Image Captioning Demo", layout="centered")
     st.title("🎓 Image Captioning Project Demo")
-    st.write("Upload an image to generate captions using your custom model or a BLIP baseline.")
+    st.write(
+        "Upload an image to generate captions " \
+        "using your custom model or a BLIP baseline."
+    )
 
     # Show a spinner while models load
-    with st.spinner("Loading models... (this may take a minute or two depending on your connection)"):
+    with st.spinner("Loading models..." \
+    " (this may take a minute or two depending on your connection)"):
         # Unpack the returned models and processors
         clip_processor, clip_model, my_model, blip_processor, blip_model = load_models()
 
@@ -108,15 +133,29 @@ def main():
             with st.spinner(f"Generating caption using {model_choice}..."):
                 try:
                     if model_choice == "My Custom Model (CLIP+LSTM)":
-                        caption = generate_my_caption(image, clip_processor, clip_model, my_model)
+                        caption = generate_my_caption(
+                            image,
+                            clip_processor,
+                            clip_model,
+                            my_model
+                        )
                         st.success(f"**My Custom Model:** {caption}")
                     else: # Baseline (BLIP)
-                        # The generate_baseline_caption function is in baseline.py
-                        caption = generate_baseline_caption(image, blip_processor, blip_model, DEVICE)
+                        caption = generate_baseline_caption(
+                            image,
+                            blip_processor,
+                            blip_model,
+                            DEVICE
+                        )
                         st.info(f"**Baseline (BLIP):** {caption}")
-                except Exception as e:
-                    st.error(f"Error during caption generation: {e}")
-                    st.exception(e) # Display full exception for debugging
+                except UnidentifiedImageError as e:
+                    st.error(f"Cannot open image: {e}")
+                except RuntimeError as e:
+                    st.error(f"PyTorch runtime error: {e}")
+                except ValueError as e:
+                    st.error(f"Value error: {e}")
+                except TypeError as e:
+                    st.error(f"Type error: {e}")
     else:
         st.info("Upload an image to get started!")
 

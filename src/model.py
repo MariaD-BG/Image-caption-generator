@@ -1,28 +1,50 @@
-from typing import List, Tuple
+"""
+Definition of the Image Caption Generation model.
+"""
+
+from typing import List,Tuple
+from dataclasses import dataclass
 import numpy as np
 import torch
 from torch import nn
 from transformers import CLIPTokenizer
 
+@dataclass
+class ModelConfig:
+    """Configuration for ImageCaptionModel."""
+    input_dim: int
+    embed_size: int
+    hidden_size: int
+    vocab_size: int
+    num_layers: int = 1
+    dropout: float = 0.0
+
 class ImageCaptionModel(nn.Module):
+
+    """
+    Definition of Image Caption Generation model.
+    Includes forward pass and generation & inference methods
+    """
+
     def __init__(self,
-                 input_dim:int,
-                 embed_size:int,
-                 hidden_size:int,
-                 vocab_size:int,
-                 num_layers:int = 1,
-                 dropout:float = 0.0
+                 config: ModelConfig
         ):
 
-        super(ImageCaptionModel, self).__init__()
-        self.embed = nn.Embedding(vocab_size, embed_size)
-        self.linear_img = nn.Linear(input_dim, embed_size)
-        self.lstm = nn.LSTM(embed_size, hidden_size, num_layers, batch_first=True)
-        self.linear_out = nn.Linear(hidden_size, vocab_size)
-        self.dropout = torch.nn.Dropout(dropout)
-        self.tokenizer = CLIPTokenizer.from_pretrained("openai/clip-vit-base-patch32")
-        self.vocab_size = self.tokenizer.vocab_size
+        super().__init__()
+        self.config = config
 
+        self.embed = nn.Embedding(config.vocab_size, config.embed_size)
+        self.linear_img = nn.Linear(config.input_dim, config.embed_size)
+        self.lstm = nn.LSTM(
+            config.embed_size,
+            config.hidden_size,
+            config.num_layers,
+            batch_first=True
+        )
+        self.linear_out = nn.Linear(config.hidden_size, config.vocab_size)
+        self.dropout = torch.nn.Dropout(config.dropout)
+
+        self.tokenizer = CLIPTokenizer.from_pretrained("openai/clip-vit-base-patch32")
 
     def forward(self, features : np.ndarray, captions: np.ndarray) -> torch.Tensor:
         """
@@ -62,75 +84,86 @@ class ImageCaptionModel(nn.Module):
                     features: torch.Tensor,
                     max_len: int = 20,
                     beam_width: int = 5
-        ) -> List[str]:
+                ) -> List[str]:
         """
-        Model inference; uses beam search instead of greedy strategy to find best sequence
-        (based on accumulated score)
+        Beam search for choosing the best caption based on accumulated score
+        Better than greedy approach of always choosing the next best token
         """
         self.eval()
-        batch_size = features.shape[0]
-
         with torch.no_grad():
-
-            image_embeds = self.linear_img(features).unsqueeze(1)
-            # initial_states = (h_n, c_n) both of shape (1, batch_size, hidden_size)
-            _, initial_states = self.lstm(image_embeds)
-
-            # Start with the <SOS> token
-            start_token = self.tokenizer.bos_token_id
-
-            # Initialize beams
-            beams = []
-            for i in range(batch_size):
-                # Extract the initial hidden and cell states for this specific image 'i'
-                h_i = initial_states[0][:, i:i+1, :] # shape (1, 1, hidden_size)
-                c_i = initial_states[1][:, i:i+1, :] # shape (1, 1, hidden_size)
-                initial_state_for_image = (h_i, c_i)
-                beams.append([(torch.tensor([start_token]).to(features.device), 0.0, initial_state_for_image)])
-
-            final_captions : List[List[Tuple[torch.Tensor, float]]] = [[] for _ in range(batch_size)]
+            beams, _ = self._init_beam_search(features)
+            batch_size = features.shape[0]
+            final_captions:List[List[Tuple[torch.Tensor, float]]] = [[] for _ in range(batch_size)]
 
             for _ in range(max_len):
                 for i in range(batch_size):
                     if not beams[i]:
                         continue
 
-                    new_candidates = []
-                    for sequence, score, current_states in beams[i]: # Use current_states for the beam
-                        # breakpoint()
-                        if sequence[-1] == self.tokenizer.eos_token_id:
-                            final_captions[i].append((sequence, score))
-                            continue
+                    # Extract the heavy logic into a helper method
+                    beams[i], completed = self._expand_beam(
+                        beams[i], beam_width
+                    )
+                    final_captions[i].extend(completed)
 
-                        inputs = self.embed(sequence[-1].unsqueeze(0).unsqueeze(0))
-                        hiddens, new_states = self.lstm(inputs, current_states)
-                        output = self.linear_out(hiddens.squeeze(1))
+            return self._decode_captions(beams, final_captions, batch_size)
 
-                        # Use log_softmax for numerical stability
-                        log_probs = torch.nn.functional.log_softmax(output, dim=1)
-                        top_k_log_probs, top_k_indices = torch.topk(log_probs, beam_width, dim=1)
+    def _init_beam_search(self, features: torch.Tensor):
+        """Helper to initialize beams and states."""
+        batch_size = features.shape[0]
+        image_embeds = self.linear_img(features).unsqueeze(1)
+        _, initial_states = self.lstm(image_embeds)
+        start_token = self.tokenizer.bos_token_id
 
-                        for k in range(beam_width):
-                            new_seq = torch.cat([sequence, top_k_indices[0, k].unsqueeze(0)])
-                            new_score = score + top_k_log_probs[0, k].item()
-                            new_candidates.append((new_seq, new_score, new_states))
+        beams = []
+        for i in range(batch_size):
+            h_i = initial_states[0][:, i:i+1, :]
+            c_i = initial_states[1][:, i:i+1, :]
+            # Tuple: (sequence, score, state)
+            beams.append([(
+                torch.tensor([start_token]).to(features.device),
+                0.0,
+                (h_i, c_i)
+            )])
+        return beams, initial_states
 
-                    # Sort candidates by score and select top beam_width
-                    beams[i] = sorted(new_candidates, key=lambda x: x[1], reverse=True)[:beam_width]
+    def _expand_beam(self, current_beam, beam_width):
 
-            for i in range(batch_size):
-                # If no complete caption was found, use the best available beam
-                if not final_captions[i]:
-                    final_captions[i] = [(beams[i][0][0], beams[i][0][1])] if beams[i] else []
+        """Helper to process one step of beam search for a single image."""
+        new_candidates = []
+        completed_captions = []
 
+        for sequence, score, current_states in current_beam:
+            if sequence[-1] == self.tokenizer.eos_token_id:
+                completed_captions.append((sequence, score))
+                continue
 
-            # Decode the final captions
-            decoded_captions = []
-            for i in range(batch_size):
-                if final_captions[i]:
-                    best_seq, _ = max(final_captions[i], key=lambda x: x[1])
-                    decoded_captions.append(self.tokenizer.decode(best_seq, skip_special_tokens=True))
-                else:
-                    decoded_captions.append("") # Or some default caption
+            inputs = self.embed(sequence[-1].view(1, 1))
+            hiddens, new_states = self.lstm(inputs, current_states)
+            output = self.linear_out(hiddens.squeeze(1))
+            log_probs = torch.nn.functional.log_softmax(output, dim=1)
+            top_k_log, top_k_idx = torch.topk(log_probs, beam_width, dim=1)
 
-        return decoded_captions
+            for k in range(beam_width):
+                new_seq = torch.cat([sequence, top_k_idx[0, k].unsqueeze(0)])
+                new_score = score + top_k_log[0, k].item()
+                new_candidates.append((new_seq, new_score, new_states))
+
+        # Select top k
+        best_candidates = sorted(new_candidates, key=lambda x: x[1], reverse=True)[:beam_width]
+        return best_candidates, completed_captions
+
+    def _decode_captions(self, beams, final_captions, batch_size) -> List[str]:
+        """Helper to turn token IDs into strings."""
+        decoded = []
+        for i in range(batch_size):
+            if not final_captions[i]:
+                # Fallback to current beam if no EOS found
+                final_captions[i] = [(beams[i][0][0], beams[i][0][1])] if beams[i] else []
+
+            if final_captions[i]:
+                best_seq, _ = max(final_captions[i], key=lambda x: x[1])
+                decoded.append(self.tokenizer.decode(best_seq, skip_special_tokens=True))
+            else:
+                decoded.append("")
+        return decoded

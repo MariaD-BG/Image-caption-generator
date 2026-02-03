@@ -1,6 +1,16 @@
+"""
+Function for caption generation of BLIP (used as baseline)
+"""
 import torch
+from PIL.Image import Image
+from transformers import BlipProcessor, BlipForConditionalGeneration
 
-def generate_baseline_caption(image, processor, model, device):
+def generate_baseline_caption(
+        image:Image,
+        processor:BlipProcessor,
+        model:BlipForConditionalGeneration,
+        device:torch.device
+    ) -> str:
     """
     Generates a caption for the given image using the BLIP model.
 

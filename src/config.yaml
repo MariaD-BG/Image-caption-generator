@@ -4,6 +4,7 @@ data:
 model_params:
   embed_size: 512
   hidden_size: 512
+  lstm_layers: 1
 training:
   epochs: 50
   batch_size: 256
