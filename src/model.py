@@ -1,11 +1,18 @@
-import torch
-import torch.nn as nn
-import numpy as np
 from typing import List, Tuple
+import numpy as np
+import torch
+from torch import nn
 from transformers import CLIPTokenizer
 
 class ImageCaptionModel(nn.Module):
-    def __init__(self, input_dim:int, embed_size:int, hidden_size:int, vocab_size:int, num_layers:int = 1, dropout:float = 0.0):
+    def __init__(self,
+                 input_dim:int,
+                 embed_size:int,
+                 hidden_size:int,
+                 vocab_size:int,
+                 num_layers:int = 1,
+                 dropout:float = 0.0
+        ):
 
         super(ImageCaptionModel, self).__init__()
         self.embed = nn.Embedding(vocab_size, embed_size)
@@ -29,7 +36,8 @@ class ImageCaptionModel(nn.Module):
         image_embed = self.dropout(image_embed)
         image_embed = image_embed.unsqueeze(1)
 
-        # Concatenate the image embedding first; like the image being the first 'word' we start predicting after
+        # Concatenate the image embedding first;
+        # like the image being the first 'word' we start predicting after
         inputs = torch.cat((image_embed, embeddings), dim=1)
 
         # Run the LSTM
@@ -40,17 +48,33 @@ class ImageCaptionModel(nn.Module):
         outputs = self.linear_out(lstm_out)
         return outputs
 
-    def generate(self, features: torch.Tensor, max_len: int = 20, beam_width: int = 5) -> List[str]:
+    def generate(self,
+                 features: torch.Tensor,
+                 max_len: int = 20,
+                 beam_width: int = 5
+        ) -> List[str]:
+        """
+        Call beam search on a batch of features to generate captions for images
+        """
         return self.beam_search(features, max_len, beam_width)
 
-    def beam_search(self, features: torch.Tensor, max_len: int = 20, beam_width: int = 5) -> List[str]:
+    def beam_search(self,
+                    features: torch.Tensor,
+                    max_len: int = 20,
+                    beam_width: int = 5
+        ) -> List[str]:
+        """
+        Model inference; uses beam search instead of greedy strategy to find best sequence
+        (based on accumulated score)
+        """
         self.eval()
         batch_size = features.shape[0]
 
         with torch.no_grad():
 
             image_embeds = self.linear_img(features).unsqueeze(1)
-            _, initial_states = self.lstm(image_embeds) # initial_states = (h_n, c_n) both of shape (1, batch_size, hidden_size)
+            # initial_states = (h_n, c_n) both of shape (1, batch_size, hidden_size)
+            _, initial_states = self.lstm(image_embeds)
 
             # Start with the <SOS> token
             start_token = self.tokenizer.bos_token_id
