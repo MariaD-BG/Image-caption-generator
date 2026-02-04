@@ -90,10 +90,13 @@ class ImageCaptionModel(nn.Module):
         Better than greedy approach of always choosing the next best token
         """
         self.eval()
+
         with torch.no_grad():
             beams, _ = self._init_beam_search(features)
             batch_size = features.shape[0]
             final_captions:List[List[Tuple[torch.Tensor, float]]] = [[] for _ in range(batch_size)]
+
+            print(f"Inferred batch size: {batch_size}")
 
             for _ in range(max_len):
                 for i in range(batch_size):

@@ -60,6 +60,7 @@ def bleu_test(
     with torch.no_grad():
         for features, captions in tqdm.tqdm(data_loader):
             features = features.to(device)
+            print(f"Features shape: {features.shape}")
             gen = model.generate(features)
 
             caps_str = tokenizer.batch_decode(captions, skip_special_tokens=True)
