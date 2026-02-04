@@ -2,7 +2,6 @@
 data/
 test_images/
 checkpoints/
-plots/
 src/image_caption_generator.egg-info
 __pycache__/
 .mypy_cache/
