@@ -8,3 +8,4 @@
 
 ## Архитектура на модела
 Моделът представлява encoder-decoder модел, където за encoder (тоест генерирани на подходящи feature-и от суровите пиксели) използваме готовия модел CLIP (https://openai.com/index/clip/). Decoder-ът е LSTM модел с embedding и output layer. За dictionary от token-и използваме тези на CLIP модела. При inference използваме beam search за намиране на оптималната последователност, вместо greedy approach с директно избиране на най-вероятната следваща дума.
+Тренирането се извършва върху Flickr8K (https://www.kaggle.com/datasets/adityajn105/flickr8k) -- набор от около 8000 изображения със съответстващо им описание (едно изречение за всяка).
