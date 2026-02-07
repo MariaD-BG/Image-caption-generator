@@ -29,126 +29,144 @@ def save_checkpoint(
     torch.save(checkpoint, filepath)
     print(f"Checkpoint saved to {filepath}")
 
-CONFIG_PATH = "src/ICGmodel/config.yaml"
 
-with open(CONFIG_PATH, "r", encoding="utf-8") as file:
-    config = yaml.safe_load(file)
+def train_model(
+        config_path : str,
+        device : torch.device
+) -> ImageCaptionModel:
 
-input_dim = config["data"]["input_dim"]
-data_path = config["data"]["folder_path"]
-captions_path = data_path + "captions.txt"
-features_path = data_path + "features.pt"
+    """training logic for ICG model. Returns the trained model"""
 
-embed_size = config["model_params"]["embed_size"]
-hidden_size = config["model_params"]["hidden_size"]
-num_layers = config["model_params"]["lstm_layers"]
+    with open(config_path, "r", encoding="utf-8") as file:
+        config = yaml.safe_load(file)
 
-batch_size = config["training"]["batch_size"]
-lr = float(config["training"]["lr"])
-weight_decay = float(config["training"]["weight_decay"])
-dropout = float(config["training"]["dropout"])
-num_epochs = config["training"]["epochs"]
+    input_dim = config["data"]["input_dim"]
+    data_path = config["data"]["folder_path"]
+    captions_path = data_path + "captions.txt"
+    features_path = data_path + "features.pt"
 
-plots_path = config["saving"]["plots_path"]
-checkpoints_path = config["saving"]["checkpoints_path"]
+    embed_size = config["model_params"]["embed_size"]
+    hidden_size = config["model_params"]["hidden_size"]
+    num_layers = config["model_params"]["lstm_layers"]
 
-tokenizer = CLIPTokenizer.from_pretrained("openai/clip-vit-base-patch32")
-vocab_size = tokenizer.vocab_size
+    batch_size = config["training"]["batch_size"]
+    lr = float(config["training"]["lr"])
+    weight_decay = float(config["training"]["weight_decay"])
+    dropout = float(config["training"]["dropout"])
+    num_epochs = config["training"]["epochs"]
 
-model_config = ModelConfig(
-    input_dim=input_dim,
-    embed_size=embed_size,
-    hidden_size=hidden_size,
-    vocab_size=vocab_size,
-    num_layers=num_layers,
-    dropout=dropout
-)
+    plots_path = config["saving"]["plots_path"]
+    checkpoints_path = config["saving"]["checkpoints_path"]
 
-train_dataset = ImageDataset(
-    features_path = features_path,
-    cap_path = captions_path,
-    split = "train"
-)
-val_dataset = ImageDataset(
-    features_path = features_path,
-    cap_path = captions_path,
-    split = "validation"
-)
+    tokenizer = CLIPTokenizer.from_pretrained("openai/clip-vit-base-patch32")
+    vocab_size = tokenizer.vocab_size
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-icg_model = ImageCaptionModel(model_config).to(device)
-criterion = nn.CrossEntropyLoss(ignore_index=tokenizer.pad_token_id)
-optimizer = torch.optim.Adam(params=icg_model.parameters(), lr = lr, weight_decay = weight_decay)
+    model_config = ModelConfig(
+        input_dim=input_dim,
+        embed_size=embed_size,
+        hidden_size=hidden_size,
+        vocab_size=vocab_size,
+        num_layers=num_layers,
+        dropout=dropout
+    )
 
-train_loader = DataLoader(
-    dataset = train_dataset,
-    batch_size = batch_size,
-    collate_fn = collate_fn,
-    shuffle = True
-)
-val_loader = DataLoader(
-    dataset = val_dataset,
-    batch_size = batch_size,
-    collate_fn = collate_fn,
-    shuffle = True
-)
+    train_dataset = ImageDataset(
+        features_path = features_path,
+        cap_path = captions_path,
+        split = "train"
+    )
+    val_dataset = ImageDataset(
+        features_path = features_path,
+        cap_path = captions_path,
+        split = "validation"
+    )
 
-print("Starting training...")
+    icg_model = ImageCaptionModel(model_config).to(device)
+    criterion = nn.CrossEntropyLoss(ignore_index=tokenizer.pad_token_id)
+    optimizer = torch.optim.Adam(
+        params=icg_model.parameters(),
+        lr = lr,
+        weight_decay = weight_decay
+    )
 
-train_losses = []
-val_losses= []
+    train_loader = DataLoader(
+        dataset = train_dataset,
+        batch_size = batch_size,
+        collate_fn = collate_fn,
+        shuffle = True
+    )
+    val_loader = DataLoader(
+        dataset = val_dataset,
+        batch_size = batch_size,
+        collate_fn = collate_fn,
+        shuffle = True
+    )
 
-best_val_loss = float("inf")
-for epoch in range(num_epochs):
+    print("Starting training...")
 
-    print(f"Starting epoch...{epoch}")
+    train_losses = []
+    val_losses= []
 
-    epoch_start = time.time()
+    best_val_loss = float("inf")
+    for epoch in range(num_epochs):
 
-    icg_model.train()
-    avg_loss = 0.0
-    for batch in train_loader:
-        features, captions = batch
-        features, captions = features.to(device), captions.to(device)
+        print(f"Starting epoch...{epoch}")
 
-        outputs = icg_model(features, captions)
-        loss = criterion(outputs.reshape(-1, vocab_size), captions.reshape(-1))
+        epoch_start = time.time()
 
-        optimizer.zero_grad()
-        loss.backward()
-        torch.nn.utils.clip_grad_norm_(icg_model.parameters(), max_norm=1.0)
-        optimizer.step()
-        avg_loss += loss.item()
-    avg_loss = avg_loss / len(train_loader)
+        icg_model.train()
+        avg_loss = 0.0
+        for batch in train_loader:
+            features, captions = batch
+            features, captions = features.to(device), captions.to(device)
 
-    train_losses.append(avg_loss)
-
-    epoch_end = time.time()
-    print(f"Completed epoch {epoch} in {epoch_end - epoch_start}s")
-
-    if (epoch+1)%10 == 0:
-        print(f"Epoch {epoch+1}/{num_epochs}, avg loss: {avg_loss}")
-
-    icg_model.eval()
-    val_loss = 0.0
-    for batch in val_loader:
-        features, captions = batch
-        features, captions = features.to(device), captions.to(device)
-        with torch.no_grad():
             outputs = icg_model(features, captions)
             loss = criterion(outputs.reshape(-1, vocab_size), captions.reshape(-1))
-        val_loss += loss.item()
-    val_loss = val_loss / len(val_loader)
-    print(f"Calculated validation loss at epoch {epoch+1}: {val_loss}")
-    val_losses.append(val_loss)
 
-    if val_loss < best_val_loss:
-        save_checkpoint(
-            model=icg_model,
-            optimizer_s=optimizer,
-            filepath = checkpoints_path+"checkpoint.pth"
-        )
-        best_val_loss = val_loss
+            optimizer.zero_grad()
+            loss.backward()
+            torch.nn.utils.clip_grad_norm_(icg_model.parameters(), max_norm=1.0)
+            optimizer.step()
+            avg_loss += loss.item()
+        avg_loss = avg_loss / len(train_loader)
 
-    if (epoch+1)%10 == 0:
-        plot_loss(train_losses, val_losses, plots_path + "train_loss.png", val_interval=1)
+        train_losses.append(avg_loss)
+
+        epoch_end = time.time()
+        print(f"Completed epoch {epoch} in {epoch_end - epoch_start}s")
+
+        if (epoch+1)%10 == 0:
+            print(f"Epoch {epoch+1}/{num_epochs}, avg loss: {avg_loss}")
+
+        icg_model.eval()
+        val_loss = 0.0
+        for batch in val_loader:
+            features, captions = batch
+            features, captions = features.to(device), captions.to(device)
+            with torch.no_grad():
+                outputs = icg_model(features, captions)
+                loss = criterion(outputs.reshape(-1, vocab_size), captions.reshape(-1))
+            val_loss += loss.item()
+        val_loss = val_loss / len(val_loader)
+        print(f"Calculated validation loss at epoch {epoch+1}: {val_loss}")
+        val_losses.append(val_loss)
+
+        if val_loss < best_val_loss:
+            save_checkpoint(
+                model=icg_model,
+                optimizer_s=optimizer,
+                filepath = checkpoints_path+"checkpoint.pth"
+            )
+            best_val_loss = val_loss
+
+        if (epoch+1)%10 == 0:
+            plot_loss(train_losses, val_losses, plots_path + "train_loss.png", val_interval=1)
+
+    return icg_model
+
+if __name__ == "__main__":
+
+    CONFIG_PATH = "src/ICGmodel/config.yaml"
+    DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    trained_model : ImageCaptionModel = train_model(CONFIG_PATH, DEVICE)
