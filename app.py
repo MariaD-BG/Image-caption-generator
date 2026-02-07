@@ -15,10 +15,10 @@ from transformers import(
     BlipForConditionalGeneration,
 )
 
-from src import ImageCaptionModel, ModelConfig
+from ICGmodel import ImageCaptionModel, ModelConfig
 from baseline import generate_baseline_caption
 
-CONFIG_PATH = "src/config.yaml"
+CONFIG_PATH = "src/ICGmodel/config.yaml"
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 CHECKPOINT_PATH = "checkpoints/checkpoint_trained.pth"
 CAPTIONS_PATH = "data/captions.txt"
@@ -37,7 +37,6 @@ def load_models():
     clip_model.eval()
 
     # 2. My Custom Image Captioning Model
-    # Parameters must match those used during training (from src/config.yaml)
     with open(CONFIG_PATH, "r", encoding="utf-8") as file:
         config = yaml.safe_load(file)
 

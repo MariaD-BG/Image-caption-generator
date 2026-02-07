@@ -1,11 +1,17 @@
-import torch
-import tqdm
+"""
+Module containing ImageDataset class
+"""
 import re
 from typing import Tuple
-from torch.nn.utils.rnn import pad_sequence
+import torch
+import tqdm
 from transformers import CLIPTokenizer
 
 class ImageDataset(torch.utils.data.Dataset):
+
+    """
+    ImageDataset module; using CLIP architecture; test, train and validation splits;
+    """
 
     def __init__(self, features_path: str, cap_path: str, split: str):
 
@@ -20,7 +26,7 @@ class ImageDataset(torch.utils.data.Dataset):
 
         self.data = []
         available_imgs = set(self.features_dict.keys())
-        with open(cap_path, "r") as f:
+        with open(cap_path, "r", encoding = "utf-8") as f:
             for line in tqdm.tqdm(f):
                 img_name, cap = line.split(",", maxsplit=1)
                 # Remove punctuation, convert to lowercase, and strip whitespace
@@ -47,13 +53,22 @@ class ImageDataset(torch.utils.data.Dataset):
 
     def __getitem__(self, index) -> Tuple[str, torch.Tensor]:
         img, cap = self.data[index]
-        
+
         # Tokenize the caption
-        cap_tokens = self.tokenizer(cap, padding="max_length", max_length=77, truncation=True, return_tensors="pt")["input_ids"].squeeze(0)
+        cap_tokens = self.tokenizer(
+            cap,
+            padding="max_length",
+            max_length=77,
+            truncation=True,
+            return_tensors="pt"
+        )["input_ids"].squeeze(0)
 
         return (img, cap_tokens)
 
 def collate_fn(batch):
+    """
+    Collate function; used to create a Dataloader from an ImageDataset class
+    """
     images, captions = zip(*batch)
     images_tensor = torch.stack(images)
     captions_tensor = torch.stack(captions)

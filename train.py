@@ -9,9 +9,9 @@ from torch.optim import Adam
 from torch.utils.data import DataLoader
 from transformers import CLIPTokenizer
 
-from src import ImageCaptionModel, ImageDataset, ModelConfig
-from src.dataset import collate_fn
-from src.utils import plot_loss
+from ICGmodel import ImageCaptionModel, ImageDataset, ModelConfig
+from ICGmodel.dataset import collate_fn
+from ICGmodel.utils import plot_loss
 
 def save_checkpoint(
         model : ImageCaptionModel,
@@ -29,7 +29,7 @@ def save_checkpoint(
     torch.save(checkpoint, filepath)
     print(f"Checkpoint saved to {filepath}")
 
-CONFIG_PATH = "src/config.yaml"
+CONFIG_PATH = "src/ICGmodel/config.yaml"
 
 with open(CONFIG_PATH, "r", encoding="utf-8") as file:
     config = yaml.safe_load(file)

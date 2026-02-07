@@ -13,8 +13,8 @@ from torch.utils.data import DataLoader
 from torchmetrics.text import BLEUScore
 from transformers import CLIPTokenizer
 
-from src.dataset import ImageDataset, collate_fn
-from src.model import ImageCaptionModel, ModelConfig
+from ICGmodel.dataset import ImageDataset, collate_fn
+from ICGmodel.model import ImageCaptionModel, ModelConfig
 
 BLEU = BLEUScore(n_gram=4)
 
@@ -120,6 +120,6 @@ if __name__ == "__main__":
     parser.add_argument("--checkpoint", type=str, required=True)
     args_parsed = parser.parse_args()
 
-    CONFIG_PATH = "src/config.yaml"
+    CONFIG_PATH = "src/ICGmodel/config.yaml"
 
     main(args=args_parsed, config_path=CONFIG_PATH)

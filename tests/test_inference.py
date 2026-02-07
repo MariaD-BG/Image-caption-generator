@@ -1,19 +1,30 @@
+"""
+Testing model inference
+"""
+from typing import Tuple, List
 import torch
 import pytest
+import pathlib
+import transformers
 from transformers import CLIPTokenizer
-from src.model import ImageCaptionModel, ModelConfig
+from ICGmodel.model import ImageCaptionModel, ModelConfig
 
 
 @pytest.fixture
-def tokenizer():
+def tokenizer() -> CLIPTokenizer:
     """Shared tokenizer to ensure vocab sizes match."""
-    return CLIPTokenizer.from_pretrained("openai/clip-vit-base-patch32")
+    tok = CLIPTokenizer.from_pretrained("openai/clip-vit-base-patch32")
+    return tok
 
 @pytest.fixture
-def dummy_model_and_checkpoint(tmp_path, tokenizer):
+def dummy_model_and_checkpoint(
+    tmp_path : pathlib.PosixPath,
+    tokenizer : transformers.models.clip.tokenization_clip.CLIPTokenizer
+) -> Tuple[ImageCaptionModel, pathlib.PosixPath]:
+
     """
-    Creates a dummy model with the CORRECT vocab size and saves a checkpoint.
-    Returns the path to the checkpoint.
+    Creates a dummy model and saves a checkpoint.
+    Returns the path to the checkpoint
     """
 
     config = ModelConfig(
@@ -33,7 +44,7 @@ def dummy_model_and_checkpoint(tmp_path, tokenizer):
     return model, checkpoint_path
 
 @pytest.fixture
-def model(tokenizer) -> ImageCaptionModel:
+def model(tokenizer : CLIPTokenizer) -> ImageCaptionModel:
     """Returns a fresh dummy ImageCaptionModel for unit tests."""
     model_conf = ModelConfig(
         input_dim=768,
@@ -46,7 +57,11 @@ def model(tokenizer) -> ImageCaptionModel:
     return ImageCaptionModel(model_conf)
 
 
-def run_inference(checkpoint_path, features, tokenizer):
+def run_inference(
+        checkpoint_path : str,
+        features : torch.Tensor,
+        tokenizer : CLIPTokenizer
+) -> List[str]:
     """
     A simplified inference function that mimics inference.py.
     """
@@ -70,11 +85,15 @@ def run_inference(checkpoint_path, features, tokenizer):
     return captions
 
 
-def test_inference_produces_caption(dummy_model_and_checkpoint, tokenizer):
+def test_inference_produces_caption(
+        dummy_model_and_checkpoint : Tuple[ImageCaptionModel, str],
+        tokenizer : CLIPTokenizer
+) -> None:
     """
     Tests the end-to-end inference process using the checkpoint fixture.
     """
-    _, checkpoint_path = dummy_model_and_checkpoint
+
+    checkpoint_path : str = dummy_model_and_checkpoint[1]
 
     features = torch.randn(1, 768)
 
@@ -88,7 +107,7 @@ def test_inference_produces_caption(dummy_model_and_checkpoint, tokenizer):
     print(f"Generated caption: '{caption}'")
     assert len(caption) >= 0
 
-def test_forward_pass(model: ImageCaptionModel, tokenizer):
+def test_forward_pass(model: ImageCaptionModel, tokenizer : CLIPTokenizer) -> None:
     """
     Tests the forward pass of the ImageCaptionModel.
     """
@@ -104,7 +123,7 @@ def test_forward_pass(model: ImageCaptionModel, tokenizer):
     assert isinstance(outputs, torch.Tensor)
     assert outputs.shape == (batch_size, seq_length, tokenizer.vocab_size)
 
-def test_generate_function(model: ImageCaptionModel):
+def test_generate_function(model: ImageCaptionModel) -> None:
     """
     Tests the generate function (Beam Search).
     """

@@ -1,7 +1,8 @@
+
 import torch
 import pytest
 from transformers import CLIPTokenizer
-from src.model import ImageCaptionModel, ModelConfig
+from ICGmodel.model import ImageCaptionModel, ModelConfig
 
 @pytest.fixture
 def model() -> ImageCaptionModel:

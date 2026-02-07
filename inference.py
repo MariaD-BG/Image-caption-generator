@@ -9,7 +9,7 @@ import torch
 from PIL import Image
 from transformers import CLIPProcessor, CLIPVisionModel, CLIPTokenizer
 
-from src.model import ImageCaptionModel, ModelConfig
+from ICGmodel.model import ImageCaptionModel, ModelConfig
 
 def get_clip_features(
         image_path : str,
@@ -106,7 +106,7 @@ def main(args : argparse.Namespace, config_path : str, model_name : str) -> None
 
 if __name__ == "__main__":
 
-    CONFIG_PATH = "src/config.yaml"
+    CONFIG_PATH = "src/ICGmodel/config.yaml"
     MODEL_NAME = "openai/clip-vit-base-patch32"
 
     parser = argparse.ArgumentParser()
