@@ -17,7 +17,7 @@ github: https://github.com/MariaD-BG/Image-caption-generator
 
 ## Как да работите с модела:
 
-# *Преди да започнете:*
+### *Преди да започнете:*
 *Не забравяйте да следвате инструкциите в INSTALL.md и да свалите данните от Flickr8k в папка data!*
 
 1) Сваляте от интернет необходимите за encoder-а модели: за целта рънвате python load_models_local.py. Ще се появи папка local_clip_model, в която за запазени свалени tokenizer, processor.
