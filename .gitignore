@@ -11,3 +11,5 @@ a_old/
 *.pyc
 *.pyo
 *.pyd
+.coveragerc
+.coverage
