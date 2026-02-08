@@ -1,6 +1,7 @@
 """
 Training script for the ICG model
 """
+import os
 import time
 import yaml
 import torch
@@ -13,6 +14,7 @@ from pathlib import Path
 from ICGmodel import ImageCaptionModel, ImageDataset, ModelConfig
 from ICGmodel.dataset import collate_fn
 from ICGmodel.utils import plot_loss
+from ICGmodel.config import CLIP_MODEL_PATH
 
 def save_checkpoint(
         model : ImageCaptionModel,
@@ -66,7 +68,7 @@ def train_model(
     pl_path = Path(plots_path)
     pl_path.mkdir(parents=True, exist_ok=True)
 
-    tokenizer = CLIPTokenizer.from_pretrained("openai/clip-vit-base-patch32")
+    tokenizer = CLIPTokenizer.from_pretrained(CLIP_MODEL_PATH)
     vocab_size = tokenizer.vocab_size
 
     model_config = ModelConfig(

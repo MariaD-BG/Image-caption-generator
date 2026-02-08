@@ -6,6 +6,7 @@ from torch.utils.data import DataLoader
 
 from train import train_model, save_checkpoint
 from ICGmodel import ImageCaptionModel, ModelConfig
+from ICGmodel.config import CLIP_MODEL_PATH
 
 from transformers import CLIPTokenizer
 from pathlib import PosixPath
@@ -78,7 +79,7 @@ def workspace(tmp_path : PosixPath) -> Dict[str, Union[str, int]]:
 @pytest.fixture
 def tokenizer() -> CLIPTokenizer:
     """Shared tokenizer to ensure vocab sizes match."""
-    tok = CLIPTokenizer.from_pretrained("openai/clip-vit-base-patch32")
+    tok = CLIPTokenizer.from_pretrained(CLIP_MODEL_PATH)
     return tok
 
 def test_save_checkpoint(tmp_path : PosixPath, tokenizer : CLIPTokenizer) -> None:

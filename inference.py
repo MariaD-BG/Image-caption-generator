@@ -10,6 +10,7 @@ from PIL import Image
 from transformers import CLIPProcessor, CLIPVisionModel, CLIPTokenizer
 
 from ICGmodel.model import ImageCaptionModel, ModelConfig
+from ICGmodel.config import CLIP_MODEL_PATH
 
 def get_clip_features(
         image_path : str,
@@ -49,7 +50,7 @@ def main(args : argparse.Namespace, config_path : str, model_name : str) -> None
 
     # Load Tokenizer
     print("Loading tokenizer...")
-    tokenizer = CLIPTokenizer.from_pretrained("openai/clip-vit-base-patch32")
+    tokenizer = CLIPTokenizer.from_pretrained(model_name)
     vocab_size = tokenizer.vocab_size
 
     # Load CLIP (Vision Model Only)
@@ -107,11 +108,10 @@ def main(args : argparse.Namespace, config_path : str, model_name : str) -> None
 if __name__ == "__main__":
 
     CONFIG_PATH = "src/ICGmodel/config.yaml"
-    MODEL_NAME = "openai/clip-vit-base-patch32"
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--image", type=str, required=True, help="Path to image")
     parser.add_argument("--checkpoint", type=str, default="checkpoints/checkpoint.pth")
     args_parsed = parser.parse_args()
 
-    main(args=args_parsed, config_path=CONFIG_PATH, model_name=MODEL_NAME)
+    main(args=args_parsed, config_path=CONFIG_PATH, model_name=CLIP_MODEL_PATH)

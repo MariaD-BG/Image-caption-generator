@@ -10,6 +10,8 @@ import tqdm
 from PIL import Image
 from transformers import CLIPProcessor, CLIPVisionModel
 
+from ICGmodel.config import CLIP_MODEL_PATH
+
 def calc_and_save(
         model: CLIPVisionModel,
         img_folder: str,
@@ -72,6 +74,6 @@ def main(model_name : str, batch_size: int) -> None:
 
 if __name__ == "__main__":
 
-    MODEL_NAME = "openai/clip-vit-base-patch32"
+
     BATCH_SIZE = 512
-    main(model_name=MODEL_NAME, batch_size=BATCH_SIZE)
+    main(model_name=CLIP_MODEL_PATH, batch_size=BATCH_SIZE)

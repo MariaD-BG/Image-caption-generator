@@ -8,12 +8,13 @@ import pathlib
 import transformers
 from transformers import CLIPTokenizer
 from ICGmodel.model import ImageCaptionModel, ModelConfig
+from ICGmodel.config import CLIP_MODEL_PATH
 
 
 @pytest.fixture
 def tokenizer() -> CLIPTokenizer:
     """Shared tokenizer to ensure vocab sizes match."""
-    tok = CLIPTokenizer.from_pretrained("openai/clip-vit-base-patch32")
+    tok = CLIPTokenizer.from_pretrained(CLIP_MODEL_PATH)
     return tok
 
 @pytest.fixture

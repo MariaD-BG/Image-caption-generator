@@ -7,6 +7,8 @@ import torch
 import tqdm
 from transformers import CLIPTokenizer
 
+from ICGmodel.config import CLIP_MODEL_PATH
+
 class ImageDataset(torch.utils.data.Dataset):
 
     """
@@ -22,7 +24,7 @@ class ImageDataset(torch.utils.data.Dataset):
         self.features_path = features_path
 
         self.features_dict = torch.load(features_path)
-        self.tokenizer = CLIPTokenizer.from_pretrained("openai/clip-vit-base-patch32")
+        self.tokenizer = CLIPTokenizer.from_pretrained(CLIP_MODEL_PATH)
 
         self.data = []
         available_imgs = set(self.features_dict.keys())

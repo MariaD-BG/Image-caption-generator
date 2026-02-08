@@ -20,10 +20,12 @@
 
 2) Ако искате да разгледате данните за трениране, отваряте eda.ipynb, добавяте pip install ipykernel към environment-а си и рънвате отделните клетки на notebook-а.
 
-3) Тренирате модела: python train.py. Ще се появи папка checkpoints, в която периодично ще се обновява файлът checkpoint.pth. След всяка епоха се запазва моделът с най-добър validation loss. Ще се появи и папка plots, в която файлът train_loss.png съдържа графика на train и validation loss-ът. Той също се обновява на всяка епоха, така че можете да го следите в реално време. На a6000 gpu 50 епохи отнемат около половин час.
+3) Сваляте от интернет необходимите за encoder-а модели: за целта рънвате python load_models_local.py. Ще се появи папка local_clip_model, в която за запазени свалени tokenizer, processor.
 
-4) Тествате модела: python eval.py --checkpoint checkpoints/checkpoint.pth . Изчисляването на test score-а е бързо, но BLEU score-ът е по-бавен (може да отнеме до 20-тина минути в зависимост на какво рънвате).
+4) Тренирате модела: python train.py. Ще се появи папка checkpoints, в която периодично ще се обновява файлът checkpoint.pth. След всяка епоха се запазва моделът с най-добър validation loss. Ще се появи и папка plots, в която файлът train_loss.png съдържа графика на train и validation loss-ът. Той също се обновява на всяка епоха, така че можете да го следите в реално време. На a6000 gpu 50 епохи отнемат около половин час.
 
-5) Ако искате да тествате само нашия модел само на едно изображение, може да го направите с python inference.py  --checkpoint checkpoints/checkpoint.pth --image <path-to-jpg>
+5) Тествате модела: python eval.py --checkpoint checkpoints/checkpoint.pth . Изчисляването на test score-а е бързо, но BLEU score-ът е по-бавен (може да отнеме до 20-тина минути в зависимост на какво рънвате).
 
-6) За да сравните нашия модел с baseline такъв, можете да ръннете streamlit приложението със streamlit run app.py. Там изберете дали ще работите с нашия модел или с baseline, качете снимка и вижте резултата.
+6) Ако искате да тествате само нашия модел само на едно изображение, може да го направите с python inference.py  --checkpoint checkpoints/checkpoint.pth --image <path-to-jpg>
+
+7) За да сравните нашия модел с baseline такъв, можете да ръннете streamlit приложението със streamlit run app.py. Там изберете дали ще работите с нашия модел или с baseline, качете снимка и вижте резултата.

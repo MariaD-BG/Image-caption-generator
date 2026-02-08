@@ -15,6 +15,7 @@ from transformers import CLIPTokenizer
 
 from ICGmodel.dataset import ImageDataset, collate_fn
 from ICGmodel.model import ImageCaptionModel, ModelConfig
+from ICGmodel.config import CLIP_MODEL_PATH
 
 BLEU = BLEUScore(n_gram=4)
 
@@ -80,7 +81,7 @@ def main(args:argparse.Namespace, config_path:str) -> None:
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    tokenizer = CLIPTokenizer.from_pretrained("openai/clip-vit-base-patch32")
+    tokenizer = CLIPTokenizer.from_pretrained(CLIP_MODEL_PATH)
     vocab_size = tokenizer.vocab_size
 
     model_config = ModelConfig(

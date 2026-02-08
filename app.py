@@ -17,13 +17,13 @@ from transformers import(
 )
 
 from ICGmodel import ImageCaptionModel, ModelConfig
+from ICGmodel.config import CLIP_MODEL_PATH
 from baseline import generate_baseline_caption
 
 CONFIG_PATH = "src/ICGmodel/config.yaml"
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 CHECKPOINT_PATH = "checkpoints/checkpoint.pth"
 CAPTIONS_PATH = "data/captions.txt"
-CLIP_MODEL_NAME = "openai/clip-vit-base-patch32"
 
 @st.cache_resource
 def load_models() -> Tuple[
@@ -38,8 +38,8 @@ def load_models() -> Tuple[
     reloading on every Streamlit rerun
     """
     # CLIP for feature extraction for custom model
-    clip_processor = CLIPProcessor.from_pretrained(CLIP_MODEL_NAME)
-    clip_model = CLIPVisionModel.from_pretrained(CLIP_MODEL_NAME).to(DEVICE)
+    clip_processor = CLIPProcessor.from_pretrained(CLIP_MODEL_PATH)
+    clip_model = CLIPVisionModel.from_pretrained(CLIP_MODEL_PATH).to(DEVICE)
     clip_model.eval()
 
     # My Custom Image Captioning Model

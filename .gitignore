@@ -1,6 +1,8 @@
 .vscode/settings.json
 data/
 test_images/
+build/
+local_clip_model/
 checkpoints/
 src/ICGmodel.egg-info/
 __pycache__/

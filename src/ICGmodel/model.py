@@ -9,6 +9,8 @@ import torch
 from torch import nn
 from transformers import CLIPTokenizer
 
+from ICGmodel.config import CLIP_MODEL_PATH
+
 @dataclass
 class ModelConfig:
     """Configuration for ImageCaptionModel."""
@@ -44,7 +46,7 @@ class ImageCaptionModel(nn.Module):
         self.linear_out = nn.Linear(config.hidden_size, config.vocab_size)
         self.dropout = torch.nn.Dropout(config.dropout)
 
-        self.tokenizer = CLIPTokenizer.from_pretrained("openai/clip-vit-base-patch32")
+        self.tokenizer = CLIPTokenizer.from_pretrained(CLIP_MODEL_PATH)
 
     def forward(self, features : np.ndarray, captions: np.ndarray) -> torch.Tensor:
         """

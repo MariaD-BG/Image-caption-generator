@@ -3,12 +3,13 @@ import torch
 import pytest
 from transformers import CLIPTokenizer
 from ICGmodel.model import ImageCaptionModel, ModelConfig
+from ICGmodel.config import CLIP_MODEL_PATH
 
 @pytest.fixture
 def model() -> ImageCaptionModel:
     """Returns a dummy ImageCaptionModel."""
 
-    tokenizer = CLIPTokenizer.from_pretrained("openai/clip-vit-base-patch32")
+    tokenizer = CLIPTokenizer.from_pretrained(CLIP_MODEL_PATH)
 
     model_conf = ModelConfig(
         input_dim=768,
@@ -26,7 +27,7 @@ def test_forward_pass(model: ImageCaptionModel) -> None:
     """
     # Create dummy input tensors
 
-    tokenizer = CLIPTokenizer.from_pretrained("openai/clip-vit-base-patch32")
+    tokenizer = CLIPTokenizer.from_pretrained(CLIP_MODEL_PATH)
 
     batch_size = 4
     seq_length = 10
