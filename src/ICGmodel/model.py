@@ -120,9 +120,10 @@ class ImageCaptionModel(nn.Module):
 
         beams = []
         for i in range(batch_size):
-            h_i = initial_states[0][:, i:i+1, :]
-            c_i = initial_states[1][:, i:i+1, :]
-            # Tuple: (sequence, score, state)
+
+            h_i = initial_states[0][:, i:i+1, :].contiguous()
+            c_i = initial_states[1][:, i:i+1, :].contiguous()
+
             beams.append([(
                 torch.tensor([start_token]).to(features.device),
                 0.0,

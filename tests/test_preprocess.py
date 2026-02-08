@@ -1,9 +1,12 @@
-import pytest
-import torch
-from PIL import Image
+"""
+tests for data preprocessing
+"""
 from pathlib import PosixPath
 from typing import List, Tuple
 
+import pytest
+import torch
+from PIL import Image
 from transformers import CLIPVisionModel, CLIPProcessor
 
 from ICGmodel.config import CLIP_MODEL_PATH

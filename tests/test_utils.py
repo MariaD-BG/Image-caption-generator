@@ -1,8 +1,7 @@
-import pytest
-import os
+"""
+tests for utils
+"""
 import matplotlib
-import matplotlib.pyplot as plt
-from typing import List
 
 from ICGmodel.utils import strip_syntax, plot_loss
 
@@ -55,4 +54,3 @@ def test_plot_loss(tmp_path):
     assert save_file.exists(), "The plot file was not created"
 
     assert save_file.stat().st_size > 0, "The plot file is empty"
-

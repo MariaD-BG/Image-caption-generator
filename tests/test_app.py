@@ -1,17 +1,15 @@
+"""
+tests for streamlit app
+"""
+from unittest.mock import patch
+
 import pytest
 import torch
 import yaml
 from PIL import Image
-from unittest.mock import patch
-from transformers import CLIPTokenizer
 
 import app
 from ICGmodel.model import ModelConfig, ImageCaptionModel
-from ICGmodel.config import CLIP_MODEL_PATH
-
-@pytest.fixture
-def tokenizer() -> CLIPTokenizer:
-    return CLIPTokenizer.from_pretrained(CLIP_MODEL_PATH)
 
 @pytest.fixture
 def real_files(tmp_path, tokenizer):
@@ -30,7 +28,7 @@ def real_files(tmp_path, tokenizer):
         "training": {"dropout": 0.0}
     }
     config_path = tmp_path / "config.yaml"
-    with open(config_path, "w") as f:
+    with open(config_path, "w", encoding="utf-8") as f:
         yaml.dump(config, f)
 
     model_config = ModelConfig(
@@ -65,7 +63,7 @@ def test_load_models(real_files):
         components = app.load_models()
 
         assert len(components) == 5
-        clip_proc, clip_vis, my_model, blip_proc, blip_gen = components
+        clip_proc, clip_vis, my_model, blip_proc, _ = components
 
         assert isinstance(clip_proc, app.CLIPProcessor)
         assert isinstance(clip_vis, app.CLIPVisionModel)

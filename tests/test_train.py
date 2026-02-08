@@ -1,16 +1,18 @@
+"""
+tests for training script
+"""
+import os
+from pathlib import PosixPath
+from typing import Dict, Union
+
 import pytest
 import torch
 import yaml
-import os
-from torch.utils.data import DataLoader
+from transformers import CLIPTokenizer
 
 from train import train_model, save_checkpoint
 from ICGmodel import ImageCaptionModel, ModelConfig
-from ICGmodel.config import CLIP_MODEL_PATH
 
-from transformers import CLIPTokenizer
-from pathlib import PosixPath
-from typing import Dict, Union
 
 @pytest.fixture
 def workspace(tmp_path : PosixPath) -> Dict[str, Union[str, int]]:
@@ -54,7 +56,7 @@ def workspace(tmp_path : PosixPath) -> Dict[str, Union[str, int]]:
     }
 
     config_path = tmp_path / "config.yaml"
-    with open(config_path, "w") as f:
+    with open(config_path, "w", encoding="utf-8") as f:
         yaml.dump(config, f)
 
     # Create a dictionary of {image_id: tensor} or list, depending on your Dataset.
@@ -63,7 +65,7 @@ def workspace(tmp_path : PosixPath) -> Dict[str, Union[str, int]]:
 
     # Creating a simple CSV format: image_id,caption
     captions_file = data_dir / "captions.txt"
-    with open(captions_file, "w") as f:
+    with open(captions_file, "w", encoding="utf-8") as f:
         f.write("image_id,caption\n")
         for i in range(10):
             # Write a simple caption for each image
@@ -76,11 +78,6 @@ def workspace(tmp_path : PosixPath) -> Dict[str, Union[str, int]]:
         "input_dim": 10
     }
 
-@pytest.fixture
-def tokenizer() -> CLIPTokenizer:
-    """Shared tokenizer to ensure vocab sizes match."""
-    tok = CLIPTokenizer.from_pretrained(CLIP_MODEL_PATH)
-    return tok
 
 def test_save_checkpoint(tmp_path : PosixPath, tokenizer : CLIPTokenizer) -> None:
     """

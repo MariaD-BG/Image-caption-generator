@@ -2,11 +2,11 @@ data:
   folder_path: "data/"
   input_dim: 768
 model_params:
-  embed_size: 512
-  hidden_size: 512
-  lstm_layers: 1
+  embed_size: 256
+  hidden_size: 128
+  lstm_layers: 2
 training:
-  epochs: 50
+  epochs: 150
   batch_size: 256
   lr: 0.001
   dropout: 0.2

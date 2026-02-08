@@ -1,3 +1,6 @@
+"""
+tests for baseline loading
+"""
 import pytest
 import torch
 from PIL import Image

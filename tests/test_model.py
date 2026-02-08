@@ -1,4 +1,6 @@
-
+"""
+tests for model forward pass
+"""
 import torch
 import pytest
 from transformers import CLIPTokenizer

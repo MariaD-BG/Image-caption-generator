@@ -1,20 +1,17 @@
+"""
+tests for single-image inference script
+"""
+import argparse
+
 import pytest
 import torch
-import os
 import yaml
-import argparse
 from PIL import Image
-from transformers import CLIPProcessor, CLIPVisionModel, CLIPTokenizer
+from transformers import CLIPProcessor, CLIPVisionModel
 
 from inference import get_clip_features, main
 from ICGmodel.model import ImageCaptionModel, ModelConfig
 from ICGmodel.config import CLIP_MODEL_PATH
-
-
-@pytest.fixture
-def tokenizer():
-    """Load the real local tokenizer."""
-    return CLIPTokenizer.from_pretrained(CLIP_MODEL_PATH)
 
 @pytest.fixture
 def processor():
@@ -58,7 +55,7 @@ def workspace(tmp_path, tokenizer):
         }
     }
     config_path = tmp_path / "config.yaml"
-    with open(config_path, "w") as f:
+    with open(config_path, "w", encoding="utf-8") as f:
         yaml.dump(config, f)
 
     # We must create a model that matches the config above so it can be saved/loaded

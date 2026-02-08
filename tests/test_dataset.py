@@ -1,11 +1,10 @@
+"""
+tests for dataset class
+"""
 import pytest
 import torch
-import os
-from torch.utils.data import DataLoader
-from transformers import CLIPTokenizer
 
 from ICGmodel.dataset import ImageDataset, collate_fn
-from ICGmodel.config import CLIP_MODEL_PATH
 
 
 @pytest.fixture

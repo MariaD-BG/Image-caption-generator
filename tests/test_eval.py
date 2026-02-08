@@ -1,11 +1,13 @@
-import pytest
-import torch
-import yaml
-import os
+"""
+tests for eval script
+"""
 import argparse
 from pathlib import Path
 from typing import Dict
 
+import pytest
+import torch
+import yaml
 from torch import nn
 from torch.utils.data import DataLoader
 from transformers import CLIPTokenizer
@@ -13,10 +15,13 @@ from transformers import CLIPTokenizer
 from eval import evaluate, bleu_test, main
 from ICGmodel.model import ImageCaptionModel, ModelConfig
 from ICGmodel.dataset import ImageDataset, collate_fn
-from ICGmodel.config import CLIP_MODEL_PATH
 
 @pytest.fixture
-def workspace(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, tokenizer: CLIPTokenizer) -> Dict[str, str]:
+def workspace(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    tokenizer: CLIPTokenizer
+) -> Dict[str, str]:
     """
     Sets up a temporary workspace that mimics your project structure.
     Using monkeypatch.chdir() ensures 'data/features.pt' in eval.py
@@ -43,7 +48,7 @@ def workspace(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, tokenizer: CLIPTo
     }
 
     config_path = tmp_path / "config.yaml"
-    with open(config_path, "w") as f:
+    with open(config_path, "w", encoding="utf-8") as f:
         yaml.dump(config, f)
 
     # Create 10 dummy samples
@@ -51,7 +56,7 @@ def workspace(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, tokenizer: CLIPTo
     torch.save(features, data_dir / "features.pt")
 
     captions_file = data_dir / "captions.txt"
-    with open(captions_file, "w") as f:
+    with open(captions_file, "w", encoding="utf-8") as f:
         f.write("image_id,caption\n")
         for i in range(10):
             f.write(f"{i},start this is a test caption end\n")
@@ -76,11 +81,10 @@ def workspace(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, tokenizer: CLIPTo
     }
 
 @pytest.fixture
-def tokenizer() -> CLIPTokenizer:
-    return CLIPTokenizer.from_pretrained(CLIP_MODEL_PATH)
-
-@pytest.fixture
 def test_loader(workspace: Dict[str, str]) -> DataLoader:
+    """
+     dataloader fixture
+    """
     dataset = ImageDataset(
         features_path="data/features.pt",
         cap_path="data/captions.txt",
@@ -111,7 +115,11 @@ def test_evaluate_function(tiny_model: ImageCaptionModel, test_loader: DataLoade
     assert isinstance(loss, float)
     assert loss >= 0
 
-def test_bleu_function(tiny_model: ImageCaptionModel, test_loader: DataLoader, tokenizer: CLIPTokenizer) -> None:
+def test_bleu_function(
+        tiny_model: ImageCaptionModel,
+        test_loader: DataLoader,
+        tokenizer: CLIPTokenizer
+) -> None:
     """
     Tests the bleu_test() function in isolation.
     """
