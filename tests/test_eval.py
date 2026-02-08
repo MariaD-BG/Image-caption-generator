@@ -94,6 +94,9 @@ def test_loader(workspace: Dict[str, str]) -> DataLoader:
 
 @pytest.fixture
 def tiny_model(tokenizer: CLIPTokenizer) -> ImageCaptionModel:
+    """
+    tiny model fixture
+    """
     config = ModelConfig(
         input_dim=10,
         embed_size=16,

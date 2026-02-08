@@ -4,12 +4,13 @@ Training script for the ICG model
 import os
 import time
 import yaml
+from pathlib import Path
+
 import torch
 from torch import nn
 from torch.optim import Adam
 from torch.utils.data import DataLoader
 from transformers import CLIPTokenizer
-from pathlib import Path
 
 from ICGmodel import ImageCaptionModel, ImageDataset, ModelConfig
 from ICGmodel.dataset import collate_fn

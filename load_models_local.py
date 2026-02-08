@@ -1,16 +1,19 @@
+"""
+Script for loading processor and tokenizer CLIP models
+"""
 from transformers import CLIPProcessor, CLIPModel, CLIPTokenizer
 
-model_name = "openai/clip-vit-base-patch32"
-save_directory = "./local_clip_model"
+MODEL_NAME = "openai/clip-vit-base-patch32"
+SAVE_DICT = "./local_clip_model"
 
-print(f"Downloading {model_name}...")
+print(f"Downloading {MODEL_NAME}...")
 
-model = CLIPModel.from_pretrained(model_name)
-processor = CLIPProcessor.from_pretrained(model_name)
-tokenizer = CLIPTokenizer.from_pretrained(model_name)
+model = CLIPModel.from_pretrained(MODEL_NAME)
+processor = CLIPProcessor.from_pretrained(MODEL_NAME)
+tokenizer = CLIPTokenizer.from_pretrained(MODEL_NAME)
 
-model.save_pretrained(save_directory)
-processor.save_pretrained(save_directory)
-tokenizer.save_pretrained(save_directory)
+model.save_pretrained(SAVE_DICT)
+processor.save_pretrained(SAVE_DICT)
+tokenizer.save_pretrained(SAVE_DICT)
 
-print(f"Model saved to {save_directory}")
+print(f"Model saved to {SAVE_DICT}")

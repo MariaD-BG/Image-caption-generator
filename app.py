@@ -3,8 +3,8 @@ Script for running an app for comparison between custom and baseline model
 Allows user to upload an image
 """
 import os
-import yaml
 from typing import Tuple
+import yaml
 
 import streamlit as st
 import torch

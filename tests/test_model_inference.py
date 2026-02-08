@@ -2,9 +2,10 @@
 tests for model inference
 """
 from typing import Tuple, List
+import pathlib
+
 import torch
 import pytest
-import pathlib
 import transformers
 from transformers import CLIPTokenizer
 from ICGmodel.model import ImageCaptionModel, ModelConfig
