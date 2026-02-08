@@ -23,7 +23,7 @@ github: https://github.com/MariaD-BG/Image-caption-generator
 
 3) Сваляте от интернет необходимите за encoder-а модели: за целта рънвате python load_models_local.py. Ще се появи папка local_clip_model, в която за запазени свалени tokenizer, processor.
 
-4) Тренирате модела: python train.py. Ще се появи папка checkpoints, в която периодично ще се обновява файлът checkpoint.pth. След всяка епоха се запазва моделът с най-добър validation loss. Ще се появи и папка plots, в която файлът train_loss.png съдържа графика на train и validation loss-ът. Той също се обновява на всяка епоха, така че можете да го следите в реално време. На a6000 gpu 50 епохи отнемат около половин час.
+4) Тренирате модела: python train.py. Ще се появи папка checkpoints, в която периодично ще се обновява файлът checkpoint.pth. След всяка епоха се запазва моделът с най-добър validation loss. Ще се появи и папка plots, в която файлът train_loss.png съдържа графика на train и validation loss-ът. Той също се обновява периодично: на всеки 20 епохи, така че можете да го следите в реално време. На a6000 gpu 50 епохи отнемат около половин час.
 
 5) Тествате модела: python eval.py --checkpoint checkpoints/checkpoint.pth . Изчисляването на test score-а е бързо, но BLEU score-ът е по-бавен (може да отнеме до 20-тина минути в зависимост на какво рънвате).
 

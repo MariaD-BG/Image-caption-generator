@@ -59,11 +59,10 @@ def workspace(tmp_path : PosixPath) -> Dict[str, Union[str, int]]:
     with open(config_path, "w", encoding="utf-8") as f:
         yaml.dump(config, f)
 
-    # Create a dictionary of {image_id: tensor} or list, depending on your Dataset.
+
     features = {str(i): torch.randn(10) for i in range(10)}
     torch.save(features, data_dir / "features.pt")
 
-    # Creating a simple CSV format: image_id,caption
     captions_file = data_dir / "captions.txt"
     with open(captions_file, "w", encoding="utf-8") as f:
         f.write("image_id,caption\n")

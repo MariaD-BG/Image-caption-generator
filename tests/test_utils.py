@@ -34,7 +34,7 @@ def test_strip_syntax_2():
 def test_plot_loss(tmp_path):
     """
     Real test: Runs the actual plotting code and checks if a PNG is saved.
-    We use tmp_path so we don't clutter your actual file system.
+    We use tmp_path so we don't clutter the actual file system.
     """
 
     train_loss = [0.9, 0.8, 0.7, 0.6, 0.5]
