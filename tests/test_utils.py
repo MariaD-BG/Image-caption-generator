@@ -5,7 +5,7 @@ import matplotlib
 
 from ICGmodel.utils import strip_syntax, plot_loss
 
-matplotlib.use('Agg') # no matplotlib windows popping out
+# matplotlib.use('Agg') # no matplotlib windows popping out
 
 def test_strip_syntax_1():
     """
