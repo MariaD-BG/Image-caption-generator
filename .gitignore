@@ -2,8 +2,9 @@
 data/
 test_images/
 checkpoints/
-src/image_caption_generator.egg-info
+src/ICGmodel.egg-info/
 __pycache__/
+a_old/
 .mypy_cache/
 *.pyc
 *.pyo

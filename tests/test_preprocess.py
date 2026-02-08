@@ -1,23 +1,20 @@
 import pytest
 import torch
-import shutil
-from pathlib import Path
 from PIL import Image
+from pathlib import PosixPath
+from typing import List, Tuple
 
-# Import the real classes from transformers
-from transformers import CLIPConfig, CLIPVisionModel, CLIPImageProcessor
+from transformers import CLIPConfig, CLIPVisionModel, CLIPProcessor
 
-# Import your function
 from preprocess import calc_and_save
 
 @pytest.fixture
-def tiny_model():
+def tiny_model() -> Tuple[CLIPVisionModel, CLIPProcessor]:
     """
     Creates a REAL CLIP model and processor, but initialized with a tiny
     configuration so it runs instantly and doesn't need to download files.
     """
-    # 1. Define a tiny configuration (1 layer, small hidden size)
-    # This ensures the model is valid but lightweight
+
     config = CLIPConfig(
         vision_config={
             "hidden_size": 32,
@@ -33,7 +30,7 @@ def tiny_model():
     model = CLIPVisionModel(config.vision_config)
     model.eval()
 
-    processor = CLIPImageProcessor(
+    processor = CLIPProcessor(
         image_size=224,
         do_resize=True,
         do_center_crop=True
@@ -42,7 +39,7 @@ def tiny_model():
     return model, processor
 
 @pytest.fixture
-def real_images(tmp_path):
+def real_images(tmp_path : PosixPath) -> Tuple[PosixPath, List[str]]:
     """
     Creates a temporary folder with real (but random) JPEG images.
     """
@@ -57,7 +54,10 @@ def real_images(tmp_path):
 
     return img_folder, filenames
 
-def test_calc_and_save(tiny_model, real_images):
+def test_calc_and_save(
+        tiny_model : Tuple[CLIPVisionModel, CLIPProcessor],
+        real_images: Tuple[PosixPath, List[str]]
+) -> None:
     """
     Tests the full pipeline using real objects.
     """
@@ -86,11 +86,15 @@ def test_calc_and_save(tiny_model, real_images):
     norm = torch.linalg.norm(tensor_a)
 
     # We use a small tolerance (atol) because of floating point math
-    assert torch.isclose(norm, torch.tensor(1.0), atol=1e-5), f"Feature vector is not normalized! Norm is {norm}"
+    assert torch.isclose(norm, torch.tensor(1.0), atol=1e-5), \
+    f"Feature vector is not normalized! Norm is {norm}"
 
     print(f"\nSuccess! Generated vector shape: {tensor_a.shape}, Norm: {norm}")
 
-def test_device_movement(tiny_model, real_images):
+def test_device_movement(
+        tiny_model : Tuple[CLIPVisionModel, CLIPProcessor],
+        real_images: Tuple[PosixPath, List[str]]
+) -> None:
     """
     Verifies that the code correctly moves inputs to the specified device.
     """

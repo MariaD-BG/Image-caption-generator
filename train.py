@@ -8,6 +8,7 @@ from torch import nn
 from torch.optim import Adam
 from torch.utils.data import DataLoader
 from transformers import CLIPTokenizer
+from pathlib import Path
 
 from ICGmodel import ImageCaptionModel, ImageDataset, ModelConfig
 from ICGmodel.dataset import collate_fn
@@ -21,6 +22,7 @@ def save_checkpoint(
     """
     Helper function for saving a model checkpoint to a given path
     """
+
     checkpoint = {
         'model_state_dict': model.state_dict()
     }
@@ -57,6 +59,12 @@ def train_model(
 
     plots_path = config["saving"]["plots_path"]
     checkpoints_path = config["saving"]["checkpoints_path"]
+
+    ch_path = Path(checkpoints_path)
+    ch_path.mkdir(parents=True, exist_ok=True)
+
+    pl_path = Path(plots_path)
+    pl_path.mkdir(parents=True, exist_ok=True)
 
     tokenizer = CLIPTokenizer.from_pretrained("openai/clip-vit-base-patch32")
     vocab_size = tokenizer.vocab_size

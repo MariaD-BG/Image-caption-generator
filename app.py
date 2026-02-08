@@ -4,6 +4,7 @@ Allows user to upload an image
 """
 import os
 import yaml
+from typing import Tuple
 
 import streamlit as st
 import torch
@@ -20,23 +21,28 @@ from baseline import generate_baseline_caption
 
 CONFIG_PATH = "src/ICGmodel/config.yaml"
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-CHECKPOINT_PATH = "checkpoints/checkpoint_trained.pth"
+CHECKPOINT_PATH = "checkpoints/checkpoint.pth"
 CAPTIONS_PATH = "data/captions.txt"
 CLIP_MODEL_NAME = "openai/clip-vit-base-patch32"
 
-# --- MODEL LOADING ---
 @st.cache_resource
-def load_models():
+def load_models() -> Tuple[
+    CLIPProcessor,
+    CLIPVisionModel,
+    ImageCaptionModel,
+    BlipProcessor,
+    BlipForConditionalGeneration
+]:
     """
     Loads all necessary models and processors, caching them to avoid
     reloading on every Streamlit rerun
     """
-    # 1. CLIP for feature extraction for custom model
+    # CLIP for feature extraction for custom model
     clip_processor = CLIPProcessor.from_pretrained(CLIP_MODEL_NAME)
     clip_model = CLIPVisionModel.from_pretrained(CLIP_MODEL_NAME).to(DEVICE)
     clip_model.eval()
 
-    # 2. My Custom Image Captioning Model
+    # My Custom Image Captioning Model
     with open(CONFIG_PATH, "r", encoding="utf-8") as file:
         config = yaml.safe_load(file)
 
@@ -60,7 +66,7 @@ def load_models():
                   Please train your model first.")
         raise FileNotFoundError(f"Checkpoint not found at {CHECKPOINT_PATH}")
 
-    # 3. Baseline Model (BLIP)
+    # Baseline Model (BLIP)
     blip_processor = BlipProcessor.from_pretrained(
         "Salesforce/blip-image-captioning-base"
     )
@@ -71,8 +77,13 @@ def load_models():
     # Return all loaded components
     return clip_processor, clip_model, my_model, blip_processor, blip_model
 
-# --- HELPER FUNCTIONS FOR CAPTION GENERATION ---
-def generate_my_caption(image, processor, encoder, model):
+
+def generate_my_caption(
+    image: Image.Image,
+    processor: CLIPProcessor,
+    encoder: CLIPVisionModel,
+    model: ImageCaptionModel
+) -> str:
     """
     Generates a caption using the custom CLIP+LSTM model
     """

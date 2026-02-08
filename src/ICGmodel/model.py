@@ -96,8 +96,6 @@ class ImageCaptionModel(nn.Module):
             batch_size = features.shape[0]
             final_captions:List[List[Tuple[torch.Tensor, float]]] = [[] for _ in range(batch_size)]
 
-            print(f"Inferred batch size: {batch_size}")
-
             for _ in range(max_len):
                 for i in range(batch_size):
                     if not beams[i]:
