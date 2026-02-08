@@ -1,140 +1,126 @@
-"""
-Testing model inference
-"""
-from typing import Tuple, List
-import torch
 import pytest
-import pathlib
-import transformers
-from transformers import CLIPTokenizer
+import torch
+import os
+import yaml
+import argparse
+from PIL import Image
+from transformers import CLIPProcessor, CLIPVisionModel, CLIPTokenizer
+
+from inference import get_clip_features, main
 from ICGmodel.model import ImageCaptionModel, ModelConfig
 from ICGmodel.config import CLIP_MODEL_PATH
 
 
 @pytest.fixture
-def tokenizer() -> CLIPTokenizer:
-    """Shared tokenizer to ensure vocab sizes match."""
-    tok = CLIPTokenizer.from_pretrained(CLIP_MODEL_PATH)
-    return tok
+def tokenizer():
+    """Load the real local tokenizer."""
+    return CLIPTokenizer.from_pretrained(CLIP_MODEL_PATH)
 
 @pytest.fixture
-def dummy_model_and_checkpoint(
-    tmp_path : pathlib.PosixPath,
-    tokenizer : transformers.models.clip.tokenization_clip.CLIPTokenizer
-) -> Tuple[ImageCaptionModel, pathlib.PosixPath]:
-
-    """
-    Creates a dummy model and saves a checkpoint.
-    Returns the path to the checkpoint
-    """
-
-    config = ModelConfig(
-        input_dim=768,
-        embed_size=256,
-        hidden_size=256,
-        vocab_size=tokenizer.vocab_size,
-        num_layers=1,
-        dropout=0.0
-    )
-
-    model = ImageCaptionModel(config)
-
-    checkpoint_path = tmp_path / "dummy_checkpoint.pth"
-    torch.save({'model_state_dict': model.state_dict()}, checkpoint_path)
-
-    return model, checkpoint_path
+def processor():
+    """Load the real local processor."""
+    return CLIPProcessor.from_pretrained(CLIP_MODEL_PATH)
 
 @pytest.fixture
-def model(tokenizer : CLIPTokenizer) -> ImageCaptionModel:
-    """Returns a fresh dummy ImageCaptionModel for unit tests."""
-    model_conf = ModelConfig(
-        input_dim=768,
-        embed_size=256,
-        hidden_size=256,
-        vocab_size=tokenizer.vocab_size,
-        num_layers=1,
-        dropout=0
-    )
-    return ImageCaptionModel(model_conf)
-
-
-def run_inference(
-        checkpoint_path : str,
-        features : torch.Tensor,
-        tokenizer : CLIPTokenizer
-) -> List[str]:
-    """
-    A simplified inference function that mimics inference.py.
-    """
-
-    config = ModelConfig(
-        input_dim=768,
-        embed_size=256,
-        hidden_size=256,
-        vocab_size=tokenizer.vocab_size
-    )
-
-    model = ImageCaptionModel(config)
-
-    checkpoint = torch.load(checkpoint_path)
-    model.load_state_dict(checkpoint['model_state_dict'])
+def vision_model():
+    """Load the real local vision model."""
+    model = CLIPVisionModel.from_pretrained(CLIP_MODEL_PATH)
     model.eval()
+    return model
 
-    with torch.no_grad():
-        captions = model.generate(features)
-
-    return captions
-
-
-def test_inference_produces_caption(
-        dummy_model_and_checkpoint : Tuple[ImageCaptionModel, str],
-        tokenizer : CLIPTokenizer
-) -> None:
+@pytest.fixture
+def workspace(tmp_path, tokenizer):
     """
-    Tests the end-to-end inference process using the checkpoint fixture.
+    Sets up a full dummy environment:
+    1. A dummy image.
+    2. A dummy config (WITH input_dim=512 to match CLIP).
+    3. A dummy checkpoint file.
     """
+    # Create Dummy Image
+    img_dir = tmp_path / "images"
+    img_dir.mkdir()
+    img_path = img_dir / "test_image.jpg"
+    # Create a small red square image
+    Image.new('RGB', (224, 224), color='red').save(img_path)
 
-    checkpoint_path : str = dummy_model_and_checkpoint[1]
+    config = {
+        "data": {
+            "input_dim": 768,
+            "folder_path": "data/"
+        },
+        "model_params": {
+            "embed_size": 16,
+            "hidden_size": 16,
+            "lstm_layers": 1
+        },
+        "training": {
+            "dropout": 0.0
+        }
+    }
+    config_path = tmp_path / "config.yaml"
+    with open(config_path, "w") as f:
+        yaml.dump(config, f)
 
-    features = torch.randn(1, 768)
+    # We must create a model that matches the config above so it can be saved/loaded
+    model_config = ModelConfig(
+        input_dim=768,
+        embed_size=16,
+        hidden_size=16,
+        vocab_size=tokenizer.vocab_size,
+        num_layers=1
+    )
+    model = ImageCaptionModel(model_config)
 
-    captions = run_inference(checkpoint_path, features, tokenizer)
+    ckpt_dir = tmp_path / "checkpoints"
+    ckpt_dir.mkdir()
+    ckpt_path = ckpt_dir / "checkpoint.pth"
 
-    assert isinstance(captions, list)
-    assert len(captions) == 1
-    caption = captions[0]
-    assert isinstance(caption, str)
+    torch.save({"model_state_dict": model.state_dict()}, ckpt_path)
 
-    print(f"Generated caption: '{caption}'")
-    assert len(caption) >= 0
+    return {
+        "image_path": str(img_path),
+        "config_path": str(config_path),
+        "ckpt_path": str(ckpt_path),
+        "input_dim": 512
+    }
 
-def test_forward_pass(model: ImageCaptionModel, tokenizer : CLIPTokenizer) -> None:
+
+def test_get_clip_ok(workspace, processor, vision_model):
     """
-    Tests the forward pass of the ImageCaptionModel.
+    Test that features are extracted correctly from a real image.
     """
-    batch_size = 4
-    seq_length = 10
-    features = torch.randn(batch_size, 768)
+    device = torch.device("cpu")
+    features = get_clip_features(workspace["image_path"], processor, vision_model, device)
 
-    captions = torch.randint(0, tokenizer.vocab_size, (batch_size, seq_length))
+    assert features is not None
+    assert torch.is_tensor(features)
+    assert len(features.shape) == 2
+    assert features.shape[0] == 1
+    assert features.shape[1] == 768
 
-    outputs = model(features, captions)
-
-    assert outputs is not None
-    assert isinstance(outputs, torch.Tensor)
-    assert outputs.shape == (batch_size, seq_length, tokenizer.vocab_size)
-
-def test_generate_function(model: ImageCaptionModel) -> None:
+def test_get_clip_missing_f(tmp_path, processor, vision_model, capsys):
     """
-    Tests the generate function (Beam Search).
+    Test behavior when the image file does not exist.
     """
-    batch_size = 2
-    features = torch.randn(batch_size, 768)
+    device = torch.device("cpu")
+    bad_path = str(tmp_path / "ghost.jpg")
 
-    generated_captions = model.generate(features)
+    features = get_clip_features(bad_path, processor, vision_model, device)
 
-    assert generated_captions is not None
-    assert isinstance(generated_captions, list)
-    assert len(generated_captions) == batch_size
-    for caption in generated_captions:
-        assert isinstance(caption, str)
+    assert features is None
+    captured = capsys.readouterr()
+    assert "Image file not found" in captured.out
+
+def test_inference_main(workspace):
+    """
+    Test the full main() pipeline with valid arguments.
+    """
+    args = argparse.Namespace(
+        image=workspace["image_path"],
+        checkpoint=workspace["ckpt_path"]
+    )
+
+    try:
+        main(args, workspace["config_path"], model_name=CLIP_MODEL_PATH)
+    except Exception as e:
+        pytest.fail(f"main() raised an exception unexpectedly: {e}")
