@@ -17,11 +17,14 @@ github: https://github.com/MariaD-BG/Image-caption-generator
 
 ## Как да работите с модела:
 
-1) Подготвяте данните: python process.py. В папката data, в която сте запазили данните, ще се появи файл features.pt. Това са precompute-натите резултати от CLIP encoder-а върху всички изображения в нашите данни.
+# *Преди да започнете:*
+*Не забравяйте да следвате инструкциите в INSTALL.md и да свалите данните от Flickr8k в папка data!*
 
-2) Ако искате да разгледате данните за трениране, отваряте eda.ipynb, добавяте pip install ipykernel към environment-а си и рънвате отделните клетки на notebook-а.
+1) Сваляте от интернет необходимите за encoder-а модели: за целта рънвате python load_models_local.py. Ще се появи папка local_clip_model, в която за запазени свалени tokenizer, processor.
 
-3) Сваляте от интернет необходимите за encoder-а модели: за целта рънвате python load_models_local.py. Ще се появи папка local_clip_model, в която за запазени свалени tokenizer, processor.
+2) Подготвяте данните: python process.py. В папката data, в която сте запазили данните, ще се появи файл features.pt. Това са precompute-натите резултати от CLIP encoder-а върху всички изображения в нашите данни. (на CPU това може да отнеме до 15-тина минути; на GPU са 2-3)
+
+3) Ако искате да разгледате данните за трениране, отваряте eda.ipynb, добавяте pip install ipykernel към environment-а си и рънвате отделните клетки на notebook-а.
 
 4) Тренирате модела: python train.py. Ще се появи папка checkpoints, в която периодично ще се обновява файлът checkpoint.pth. След всяка епоха се запазва моделът с най-добър validation loss. Ще се появи и папка plots, в която файлът train_loss.png съдържа графика на train и validation loss-ът. Той също се обновява периодично: на всеки 20 епохи, така че можете да го следите в реално време. На a6000 gpu 50 епохи отнемат около половин час.
 
